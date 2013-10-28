@@ -19,7 +19,7 @@ static void handle_msg(struct qmi_device *qmid){
 
     switch(qmux_hdr->service_type){
         case QMI_SERVICE_CTL:
-            qmi_ctl_handle_msg(dev);
+            qmi_ctl_handle_msg(qmid);
             break;
         default:
             fprintf(stderr, "Message for non-supported service (%x)\n",
@@ -50,6 +50,8 @@ static void read_data(struct qmi_device *qmid){
             //+1 is for the marker, which is also part of the data I want to
             //read
             qmid->cur_qmux_length = qmux_hdr->length + 1;
+
+            //Add check for too large qmux length
         }
     } 
 
