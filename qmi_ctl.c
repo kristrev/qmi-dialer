@@ -30,6 +30,7 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     uint16_t message_id = release ? QMI_CTL_RELEASE_CID : QMI_CTL_GET_CID;
     //TODO: Perhaps make this nicer, sinceit is only used in one case
     uint16_t tlv_value = htole16((cid << 8) | service);
+    ssize_t retval = 0;
 
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             message_id);
@@ -40,7 +41,29 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
         add_tlv(buf, QMI_CTL_TLV_ALLOC_INFO, sizeof(uint8_t), &service);
 
     if(qmi_verbose_logging){
-        fprintf(stderr, "Will send:\n");
+        fprintf(stderr, "Will send (update cid):\n");
+        parse_qmi(buf);
+    }
+
+    retval = qmi_ctl_write(qmid, buf, qmux_hdr->length);
+
+    if(retval <= 0)
+        fprintf(stderr, "Failed to send request for CID for %x\n", service);
+
+
+    printf("Retval %zd\n", retval);
+    return retval;
+}
+
+ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
+            QMI_CTL_SYNC);
+
+    if(qmi_verbose_logging){
+        fprintf(stderr, "Will send (send sync):\n");
         parse_qmi(buf);
     }
 
@@ -90,6 +113,32 @@ static bool qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     return true;
 }
 
+static bool qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t result = *((uint16_t*) (tlv+1));
+
+    if(result == QMI_RESULT_FAILURE){
+        fprintf(stderr, "Sync operation failed\n");
+        return false;
+    } else
+        return true;
+}
+
+static bool qmi_ctl_request_cid(struct qmi_device *qmid){
+    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
+        return false;
+
+    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_WDS, false, 0) <= 0)
+        return false;
+
+    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
+        return false;
+
+    return true;
+}
+
 bool qmi_ctl_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
@@ -98,7 +147,23 @@ bool qmi_ctl_handle_msg(struct qmi_device *qmid){
     switch(qmi_hdr->message_id){
         case QMI_CTL_GET_CID:
         case QMI_CTL_RELEASE_CID:
+            if(qmi_verbose_logging)
+                fprintf(stdout, "CTL: CID get/release reply\n");
+
             retval = qmi_ctl_handle_cid_reply(qmid);
+            break;
+        case QMI_CTL_SYNC:
+            //TODO: I suspected some of these packages are sent by the modem
+            //every now and then. Check up on that and perhaps have a check on
+            //state
+
+            if(qmi_verbose_logging)
+                fprintf(stdout, "CTL: SYNC reply\n");
+
+            retval = qmi_ctl_handle_sync_reply(qmid);
+
+            if(retval)
+                retval = qmi_ctl_request_cid(qmid);
             break;
         default:
             fprintf(stderr, "No handle for message of type %x\n",

@@ -5,11 +5,37 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <unistd.h>
 
 #include "qmi_dialer.h"
 #include "qmi_device.h"
 #include "qmi_ctl.h"
 #include "qmi_hdrs.h"
+
+//Define this variable globally (within scope of this file), so that I can
+//access it from the signal handler
+static struct qmi_device qmid;
+
+static void qmi_cleanup(){
+    if(qmid.nas_id)
+        qmi_ctl_update_cid(&qmid, QMI_SERVICE_NAS, true, qmid.nas_id);
+
+    if(qmid.wds_id)
+        qmi_ctl_update_cid(&qmid, QMI_SERVICE_WDS, true, qmid.wds_id);
+
+    if(qmid.dms_id)
+        qmi_ctl_update_cid(&qmid, QMI_SERVICE_DMS, true, qmid.dms_id);
+
+    //Make sure all the messages are sent before exiting application (and
+    //closing file descriptor)
+    syncfs(qmid.qmi_fd);
+}
+
+static void qmi_signal_handler(int signum){
+    qmi_cleanup();
+    exit(EXIT_SUCCESS);
+}
 
 //Signal handler for closing down connection and releasing cid
 //Seems like I have to wait for a reply?
@@ -19,7 +45,14 @@ static void handle_msg(struct qmi_device *qmid){
 
     switch(qmux_hdr->service_type){
         case QMI_SERVICE_CTL:
-            qmi_ctl_handle_msg(qmid);
+            //Any error in CTL is critical
+            if(!qmi_ctl_handle_msg(qmid)){
+                fprintf(stderr, "Error in handling of control message, "
+                        "aborting\n");
+                qmi_cleanup();
+                exit(EXIT_FAILURE);
+            }
+
             break;
         default:
             fprintf(stderr, "Message for non-supported service (%x)\n",
@@ -77,8 +110,8 @@ static void read_data(struct qmi_device *qmid){
 
 int main(int argc, char *argv[]){
     //Should also be global, so I can access it in signal handler
-    struct qmi_device qmid;
     ssize_t numbytes = 0;
+    struct sigaction sa;
 
     //TODO: Set using command line option
     qmi_verbose_logging = 1;
@@ -94,12 +127,18 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
 
+    //Add signal handler
+    //TODO: Move to separate function
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = qmi_signal_handler;
+
+    sigaction(SIGTERM, &sa, NULL);
+    sigaction(SIGINT, &sa, NULL);
+
     //Send request for CID(s). The rest will then be controlled by messages from
     //the modem.
     //TODO: Error check
-    qmi_ctl_update_cid(&qmid, QMI_SERVICE_NAS, false, 0);
-    qmi_ctl_update_cid(&qmid, QMI_SERVICE_WDS, false, 0);
-    qmi_ctl_update_cid(&qmid, QMI_SERVICE_DMS, false, 0);
+    qmi_ctl_send_sync(&qmid);
 
     //TODO: Assumes no packet loss. Is that safe?
     while(1)
