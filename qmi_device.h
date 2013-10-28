@@ -1,9 +1,7 @@
 #ifndef QMI_DEVICE_H
 #define QMI_DEVICE_H
 
-//See:
-//http://lists.freedesktop.org/archives/libqmi-devel/2012-August/000178.html
-#define QMI_DEFAULT_BUF_SIZE 0x1000
+#include "qmi_shared.h"
 
 //Different sates for each service type
 enum{

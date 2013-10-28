@@ -36,9 +36,9 @@ struct qmi_tlv{
     uint16_t length;
 } __attribute__((packed));
 
-typedef struct qmux_header qmux_header_t;
-typedef struct qmi_header_ctl qmi_header_ctl_t;
-typedef struct qmi_header_gen qmi_header_gen_t;
+typedef struct qmux_header qmux_hdr_t;
+typedef struct qmi_header_ctl qmi_hdr_ctl_t;
+typedef struct qmi_header_gen qmi_hdr_gen_t;
 typedef struct qmi_tlv qmi_tlv_t;
 
 #endif
