@@ -79,9 +79,9 @@ void parse_qmi(uint8_t *buf){
     uint16_t tlv_length = 0;
 
     fprintf(stderr, "Complete message:\n");
-    for(i=0; i < qmux_hdr->length + 1; i++)
+    for(i=0; i < qmux_hdr->length; i++)
         fprintf(stderr, "%.2x:", buf[i]);
-    fprintf(stderr, "\n");
+    fprintf(stderr, "%.2x\n", buf[i]);
 
     fprintf(stderr, "QMUX:\n");
     fprintf(stderr, "\tlength: %u\n", qmux_hdr->length);

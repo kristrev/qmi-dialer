@@ -33,6 +33,5 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
         parse_qmi(buf);
     }
 
-    return 0;
     return qmi_ctl_write(qmid, buf, qmux_hdr->length);
 }
