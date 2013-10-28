@@ -22,12 +22,21 @@ struct qmi_device{
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
 
     //Values independent for each service
+    //According to the documentation (QMI architecture), a control point must
+    //increment transaction id for each message it sends.
+    uint8_t ctl_transaction_id;
+
     uint8_t nas_id;
     nas_state_t nas_state;
+    uint16_t nas_transaction_id;
+
     uint8_t wds_id;
     wds_state_t wds_state;
+    uint16_t wds_transaction_id;
+
     uint8_t dms_id;
     dms_state_t dms_state;
+    uint16_t dms_transaction_id;
 };
 
 #endif

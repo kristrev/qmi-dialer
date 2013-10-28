@@ -31,8 +31,9 @@ int main(int argc, char *argv[]){
 
     //Send request for CID(s). The rest will then be controlled by messages from
     //the modem.
-    //TODO: Assumes no packet loss. Is that safe?
+    qmi_ctl_update_cid(&qmid, QMI_SERVICE_NAS, 0, 0);
 
+    //TODO: Assumes no packet loss. Is that safe?
     while(1){
          
     }

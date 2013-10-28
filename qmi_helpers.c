@@ -8,7 +8,7 @@
 
 void create_qmi_request(uint8_t *buf, uint8_t service, uint8_t client_id, 
         uint16_t transaction_id, uint16_t message_id){
-    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) (buf+1);
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
     if(service == QMI_SERVICE_CTL)
         qmux_hdr->length = sizeof(qmux_hdr_t) + sizeof(qmi_hdr_ctl_t);
@@ -43,12 +43,12 @@ void create_qmi_request(uint8_t *buf, uint8_t service, uint8_t client_id,
 
 //Assume only one TLV parameter for now
 void add_tlv(uint8_t *buf, uint8_t type, uint16_t length, void *value){
-    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) (buf+1);
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     qmi_tlv_t *tlv;
 
     assert(qmux_hdr->length + length + sizeof(qmi_tlv_t) < QMI_DEFAULT_BUF_SIZE);
 
-    tlv = (qmi_tlv_t*) (buf + qmux_hdr->length + 1);
+    tlv = (qmi_tlv_t*) (buf + qmux_hdr->length);
     tlv->type = type;
     tlv->length = length;
     memcpy(tlv + 1, value, length);
@@ -69,7 +69,7 @@ void add_tlv(uint8_t *buf, uint8_t type, uint16_t length, void *value){
 void parse_qmi(uint8_t *buf){
     int i, j;
     uint8_t *tlv_val = NULL;
-    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) (buf +1);
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     qmi_tlv_t *tlv = NULL;
     uint16_t tlv_length = 0;
 
@@ -126,3 +126,6 @@ void parse_qmi(uint8_t *buf){
     }
 }
 
+ssize_t qmi_helpers_write(int32_t qmi_fd, uint8_t *buf, ssize_t len){
+    return write(qmi_fd, buf, len);
+}
