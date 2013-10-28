@@ -21,7 +21,6 @@ static void read_data(struct qmi_device *qmid){
     //First, read a qmux header then read the data
     //TODO: Consider something more efficient than two reads. A circular buffer
     //for example.
-#if 0
     if(!qmid->cur_qmux_length){
         numbytes = read(qmid->qmi_fd, qmid->buf + qmid->qmux_progress,
                 sizeof(qmux_hdr_t));
@@ -33,8 +32,9 @@ static void read_data(struct qmi_device *qmid){
             qmid->qmux_progress += numbytes;
         } else {
             qmux_hdr = (qmux_hdr_t*) qmid->buf;
-            qmid->recv_progress = sizeof(qmux_hdr_t);
-            //
+            qmid->qmux_progress = sizeof(qmux_hdr_t);
+            //+1 is for the marker, which is also part of the data I want to
+            //read
             qmid->cur_qmux_length = qmux_hdr->length + 1;
         }
     } 
@@ -42,9 +42,20 @@ static void read_data(struct qmi_device *qmid){
     //If I have received a full header, try to read data. This might happen
     //immediatly 
     if(qmid->cur_qmux_length){
-    
+        numbytes = read(qmid->qmi_fd, qmid->buf + qmid->qmux_progress,
+                qmid->cur_qmux_length - qmid->qmux_progress);
+        qmid->qmux_progress += numbytes;
+
+        if(qmid->qmux_progress == qmid->cur_qmux_length){
+            printf("Finished qmux\n");
+
+            if(qmi_verbose_logging)
+                parse_qmi(qmid->buf);
+
+            qmid->qmux_progress = 0;
+            qmid->cur_qmux_length = 0;
+        }
     }
-#endif
 }
 
 int main(int argc, char *argv[]){

@@ -69,7 +69,6 @@ void add_tlv(uint8_t *buf, uint8_t type, uint16_t length, void *value){
         qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr+1);
         qmi_hdr->length += htole16(sizeof(qmi_tlv_t) + length);
     }
-
 }
 
 void parse_qmi(uint8_t *buf){
@@ -82,7 +81,7 @@ void parse_qmi(uint8_t *buf){
     fprintf(stderr, "Complete message:\n");
     for(i=0; i < qmux_hdr->length + 1; i++)
         fprintf(stderr, "%.2x:", buf[i]);
-    fprintf(stderr, "%.2x\n\n", buf[i]);
+    fprintf(stderr, "\n");
 
     fprintf(stderr, "QMUX:\n");
     fprintf(stderr, "\tlength: %u\n", qmux_hdr->length);
