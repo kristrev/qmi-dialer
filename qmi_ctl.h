@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+//Assume C99
+#include <stdbool.h>
 
 //CTL message types
 #define QMI_CTL_GET_CID         0x0022
@@ -16,6 +18,6 @@ struct qmi_device;
 //Method for either releasing or updating a CID
 //TODO: Look into transaction ID paramter? Is it needed?
 ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
-        uint8_t release, uint8_t cid);
+        bool release, uint8_t cid);
 
 #endif

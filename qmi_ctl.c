@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <endian.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "qmi_ctl.h"
 #include "qmi_hdrs.h"
@@ -15,7 +16,7 @@ static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
 }
 
 ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
-        uint8_t release, uint8_t cid){
+        bool release, uint8_t cid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     uint16_t message_id = release ? QMI_CTL_RELEASE_CID : QMI_CTL_GET_CID;
@@ -27,5 +28,5 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     fprintf(stderr, "Will send:\n");
     parse_qmi(buf);
 
-    return 0;
+    return qmi_ctl_write(qmid, buf, qmux_hdr->length);
 }
