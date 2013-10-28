@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <endian.h>
 
 #include "qmi_hdrs.h"
 #include "qmi_shared.h"
@@ -30,13 +31,13 @@ void create_qmi_request(uint8_t *buf, uint8_t service, uint8_t client_id,
         //Internal transaction sequence number (one message exchange)
         qmi_hdr->transaction_id = transaction_id;
         //Type of message
-        qmi_hdr->message_id = message_id;
+        qmi_hdr->message_id = htole16(message_id);
         qmi_hdr->length = 0;
     } else{
         qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr+1);
         qmi_hdr->control_flags = 0;
-        qmi_hdr->transaction_id = transaction_id;
-        qmi_hdr->message_id = message_id;
+        qmi_hdr->transaction_id = htole16(transaction_id);
+        qmi_hdr->message_id = htole16(message_id);
         qmi_hdr->length = 0;
     }
 }
@@ -50,7 +51,7 @@ void add_tlv(uint8_t *buf, uint8_t type, uint16_t length, void *value){
 
     tlv = (qmi_tlv_t*) (buf + qmux_hdr->length);
     tlv->type = type;
-    tlv->length = length;
+    tlv->length = htole16(length);
     memcpy(tlv + 1, value, length);
 
     //Update the length of thw qmux and qmi headers
