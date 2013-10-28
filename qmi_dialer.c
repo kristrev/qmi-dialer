@@ -47,10 +47,10 @@ static void read_data(struct qmi_device *qmid){
         qmid->qmux_progress += numbytes;
 
         if(qmid->qmux_progress == qmid->cur_qmux_length){
-            printf("Finished qmux\n");
-
-            if(qmi_verbose_logging)
+            if(qmi_verbose_logging){
+                fprintf(stderr, "Received:\n");
                 parse_qmi(qmid->buf);
+            }
 
             qmid->qmux_progress = 0;
             qmid->cur_qmux_length = 0;
@@ -61,13 +61,15 @@ static void read_data(struct qmi_device *qmid){
 int main(int argc, char *argv[]){
     //Should also be global, so I can access it in signal handler
     struct qmi_device qmid;
-    int32_t efd;
+    ssize_t numbytes = 0;
 
     //TODO: Set using command line option
     qmi_verbose_logging = 1;
 
     //Use RAII
     memset(&qmid, 0, sizeof(qmid));
+    qmid.ctl_transaction_id = qmid.nas_transaction_id = qmid.wds_transaction_id
+        = qmid.dms_transaction_id = 1;
 
     //This is not nice, add proper processing of arguments later
     if((qmid.qmi_fd = open(argv[1], O_RDWR)) == -1){
@@ -77,13 +79,12 @@ int main(int argc, char *argv[]){
 
     //Send request for CID(s). The rest will then be controlled by messages from
     //the modem.
-    //TODO: Get rid of magic numbers
+    //TODO: Error check
     qmi_ctl_update_cid(&qmid, QMI_SERVICE_NAS, false, 0);
 
     //TODO: Assumes no packet loss. Is that safe?
-    while(1){
+    while(1)
         read_data(&qmid); 
-    }
 
     return EXIT_SUCCESS;
 }
