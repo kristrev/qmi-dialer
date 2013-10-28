@@ -98,6 +98,8 @@ int main(int argc, char *argv[]){
     //the modem.
     //TODO: Error check
     qmi_ctl_update_cid(&qmid, QMI_SERVICE_NAS, false, 0);
+    qmi_ctl_update_cid(&qmid, QMI_SERVICE_WDS, false, 0);
+    qmi_ctl_update_cid(&qmid, QMI_SERVICE_DMS, false, 0);
 
     //TODO: Assumes no packet loss. Is that safe?
     while(1)
