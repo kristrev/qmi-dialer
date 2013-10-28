@@ -12,9 +12,12 @@ void create_qmi_request(uint8_t *buf, uint8_t service, uint8_t client_id,
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
     if(service == QMI_SERVICE_CTL)
-        qmux_hdr->length = sizeof(qmux_hdr_t) + sizeof(qmi_hdr_ctl_t);
+        //-1 is for removing the preamble
+        qmux_hdr->length = htole16(sizeof(qmux_hdr_t) - 1 +
+                sizeof(qmi_hdr_ctl_t));
     else
-        qmux_hdr->length = sizeof(qmux_hdr_t) + sizeof(qmi_hdr_gen_t);
+        qmux_hdr->length = htole16(sizeof(qmux_hdr_t) - 1 +
+                sizeof(qmi_hdr_gen_t));
 
     qmux_hdr->type = QMUX_IF_TYPE;
     //Messages are send from the control point
@@ -33,7 +36,7 @@ void create_qmi_request(uint8_t *buf, uint8_t service, uint8_t client_id,
         //Type of message
         qmi_hdr->message_id = htole16(message_id);
         qmi_hdr->length = 0;
-    } else{
+    } else {
         qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr+1);
         qmi_hdr->control_flags = 0;
         qmi_hdr->transaction_id = htole16(transaction_id);
@@ -49,22 +52,24 @@ void add_tlv(uint8_t *buf, uint8_t type, uint16_t length, void *value){
 
     assert(qmux_hdr->length + length + sizeof(qmi_tlv_t) < QMI_DEFAULT_BUF_SIZE);
 
-    tlv = (qmi_tlv_t*) (buf + qmux_hdr->length);
+    //+1 is to compensate or the mark, which is now part of message
+    tlv = (qmi_tlv_t*) (buf + qmux_hdr->length + 1);
     tlv->type = type;
     tlv->length = htole16(length);
     memcpy(tlv + 1, value, length);
 
     //Update the length of thw qmux and qmi headers
-    qmux_hdr->length += sizeof(qmi_tlv_t) + length;
+    qmux_hdr->length += htole16(sizeof(qmi_tlv_t) + length);
 
     //Updte QMI service length
     if(qmux_hdr->service_type == QMI_SERVICE_CTL){
         qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr+1);
-        qmi_hdr->length += sizeof(qmi_tlv_t) + length;
+        qmi_hdr->length += htole16(sizeof(qmi_tlv_t) + length);
     } else {
         qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr+1);
-        qmi_hdr->length += sizeof(qmi_tlv_t) + length;
+        qmi_hdr->length += htole16(sizeof(qmi_tlv_t) + length);
     }
+
 }
 
 void parse_qmi(uint8_t *buf){
@@ -75,7 +80,7 @@ void parse_qmi(uint8_t *buf){
     uint16_t tlv_length = 0;
 
     fprintf(stderr, "Complete message:\n");
-    for(i=0; i < qmux_hdr->length; i++)
+    for(i=0; i < qmux_hdr->length + 1; i++)
         fprintf(stderr, "%.2x:", buf[i]);
     fprintf(stderr, "%.2x\n\n", buf[i]);
 
@@ -87,16 +92,16 @@ void parse_qmi(uint8_t *buf){
 
     if(qmux_hdr->service_type == QMI_SERVICE_CTL){
         qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr+1);
-        fprintf(stderr, "QMI (service):\n");
+        fprintf(stderr, "QMI (control):\n");
         fprintf(stderr, "\tflags: %u\n", qmi_hdr->control_flags >> 1);
         fprintf(stderr, "\ttransaction id: %u\n", qmi_hdr->transaction_id);
         fprintf(stderr, "\tmessage type: 0x%.2x\n", qmi_hdr->message_id);
-        fprintf(stderr, "\tlength: %u\n", qmi_hdr->length);
+        fprintf(stderr, "\tlength: %u %x\n", qmi_hdr->length, qmi_hdr->length);
         tlv = (qmi_tlv_t *) (qmi_hdr+1);
         tlv_length = qmi_hdr->length;
     } else {
         qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr+1);
-        fprintf(stderr, "QMI (control):\n");
+        fprintf(stderr, "QMI (service):\n");
         fprintf(stderr, "\tflags: %u\n", qmi_hdr->control_flags >> 1);
         fprintf(stderr, "\ttransaction id: %u\n", qmi_hdr->transaction_id);
         fprintf(stderr, "\tmessage type: 0x%.2x\n", qmi_hdr->message_id);

@@ -17,8 +17,8 @@ struct qmi_device{
     int32_t qmi_fd;
 
     //Buffer has to be persistent accross calls to recv
-    uint16_t recv_progress;
-    uint16_t recv_length;
+    uint16_t qmux_progress;
+    uint16_t cur_qmux_length;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
 
     //Values independent for each service
