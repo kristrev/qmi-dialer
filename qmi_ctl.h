@@ -20,4 +20,6 @@ struct qmi_device;
 ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
         bool release, uint8_t cid);
 
+//Handle a ctl message. Returns false if something went wrong
+bool qmi_ctl_handle_msg(struct qmi_device *qmid);
 #endif

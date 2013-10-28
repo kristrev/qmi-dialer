@@ -14,6 +14,20 @@
 //Signal handler for closing down connection and releasing cid
 //Seems like I have to wait for a reply?
 
+static void handle_msg(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+
+    switch(qmux_hdr->service_type){
+        case QMI_SERVICE_CTL:
+            qmi_ctl_handle_msg(dev);
+            break;
+        default:
+            fprintf(stderr, "Message for non-supported service (%x)\n",
+                    qmux_hdr->service_type);
+            break;
+    }
+}
+
 static void read_data(struct qmi_device *qmid){
     ssize_t numbytes;
     qmux_hdr_t *qmux_hdr;
@@ -51,7 +65,8 @@ static void read_data(struct qmi_device *qmid){
                 fprintf(stderr, "Received:\n");
                 parse_qmi(qmid->buf);
             }
-
+            
+            handle_msg(qmid);
             qmid->qmux_progress = 0;
             qmid->cur_qmux_length = 0;
         }
