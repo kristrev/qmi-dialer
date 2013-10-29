@@ -17,6 +17,16 @@ enum{
     NAS_IDLE,
 };
 
+enum{
+    WDS_INIT = 0,
+    WDS_GOT_CID,
+};
+
+enum{
+    DMS_INIT = 0,
+    DMS_GOT_CID,
+};
+
 typedef uint8_t ctl_state_t;
 typedef uint8_t nas_state_t;
 typedef uint8_t wds_state_t;

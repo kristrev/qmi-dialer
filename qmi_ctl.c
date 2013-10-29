@@ -98,12 +98,15 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     switch(service){
         case QMI_SERVICE_DMS:
             qmid->dms_id = cid;
+            qmid->dms_state = NAS_GOT_CID;
             break;
         case QMI_SERVICE_WDS:
             qmid->wds_id = cid;
+            qmid->wds_state = WDS_GOT_CID;
             break;
         case QMI_SERVICE_NAS:
             qmid->nas_id = cid;
+            qmid->nas_state = NAS_GOT_CID;
             break;
         default:
             fprintf(stderr, "CID for service not handled by qmid\n");
