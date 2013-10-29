@@ -26,4 +26,6 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid);
 
 //Send a sync message to release all CIDs. Propagates return from write()
 ssize_t qmi_ctl_send_sync(struct qmi_device *qmid);
+
+//TODO: Consider implementing a generic send function? Or is it not needed?
 #endif
