@@ -10,8 +10,11 @@ enum{
 };
 
 enum{
-    NAS_INIT,
+    NAS_INIT = 0,
     NAS_GOT_CID,
+    NAS_SENT_IND_QUERY,
+    NAS_SENT_SYS_INFO_QUERY,
+    NAS_IDLE,
 };
 
 typedef uint8_t ctl_state_t;
