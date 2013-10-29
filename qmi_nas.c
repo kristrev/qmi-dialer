@@ -139,7 +139,7 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
     if((!qmid->has_service && has_service) ||
             (qmid->has_service && !has_service)){
         qmid->has_service = has_service;
-        qmi_wds_send(qmid);
+        qmi_wds_update_connect(qmid);
     }
 }
 

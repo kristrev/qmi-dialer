@@ -6,9 +6,13 @@
 //Message types
 #define QMI_WDS_SET_EVENT_REPORT            0x0001
 #define QMI_WDS_EVENT_REPORT_IND            QMI_WDS_SET_EVENT_REPORT
+#define QMI_WDS_START_NETWORK_INTERFACE     0x0020
 
 //Event report TLVs
 #define QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND  0x15
+
+//START_NETWORK_INTERFACE TLVs
+#define QMI_WDS_TLV_SNI_APN_NAME            0x14
 
 struct qmi_device;
 

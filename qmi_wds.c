@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <endian.h>
+#include <string.h>
 
 #include "qmi_wds.h"
 #include "qmi_device.h"
@@ -31,15 +32,43 @@ static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     uint8_t enable = 1;
 
-    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->nas_id,
-            qmid->nas_transaction_id, QMI_WDS_SET_EVENT_REPORT);
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_SET_EVENT_REPORT);
     add_tlv(buf, QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND, sizeof(uint8_t), &enable);
     qmid->wds_state = WDS_IND_REQ;
 
-    return qmi_wds_write(qmid, buf, qmux_hdr->length);;
+    return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
 
 uint8_t qmi_wds_connect(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+    char *apn = "internet";
+
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
+    add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(apn), apn);
+
+    //This is so far the only critical write I have. However, I will not do
+    //anything right now, the next connect will be controlled by a timeout
+    if(qmi_wds_write(qmid, buf, qmux_hdr->length) == qmux_hdr->length + 1){
+        qmid->wds_state = WDS_CONNECTING;
+        return QMI_MSG_SUCCESS;
+    } else
+        return QMI_MSG_FAILURE;
+}
+
+uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
+    //Establish a new connection if I have service and a connection is not
+    //already established, or in progress
+    //TODO: Add a check for PIN
+    if(qmid->has_service && qmid->wds_state == WDS_DISCONNECTED){
+        qmi_wds_connect(qmid);
+    } else if((qmid->wds_state == WDS_CONNECTED ||
+                qmid->wds_state == WDS_CONNECTING) && !qmid->has_service){
+        //Lost service, might disconnect
+        //TODO: Check if this one is really needed
+    }
     return 0;
 }
 
