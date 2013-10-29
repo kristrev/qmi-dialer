@@ -37,6 +37,16 @@ static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     return qmi_ctl_write(qmid, buf, qmux_hdr->length);;
 }
 
+static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+ 
+    create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
+            qmid->nas_transaction_id, QMI_NAS_GET_SYS_INFO);
+
+    return qmi_ctl_write(qmid, buf, qmux_hdr->length);
+}
+
 //Send message based on state in state machine
 uint8_t qmi_nas_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
@@ -45,6 +55,9 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
         case NAS_GOT_CID:
         case NAS_IND_REQ:
             retval = qmi_nas_send_indication_request(qmid);
+            break;
+        case NAS_SYS_INFO_QUERY:
+            retval = qmi_nas_req_sys_info(qmid);
             break;
         default:
             fprintf(stderr, "Unknown state");
@@ -55,3 +68,53 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
     return retval;
 }
 
+static uint8_t qmi_nas_handle_ind_reg_reply(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t result = *((uint16_t*) (tlv+1));
+
+    if(result == QMI_RESULT_FAILURE){
+        fprintf(stderr, "Could not register indications\n");
+        return QMI_MSG_FAILURE;
+    } else {
+        qmid->nas_state = NAS_SYS_INFO_QUERY;
+        //I don't care about the return value. If something fails, a timeout
+        //will make sure the message is resent
+        qmi_nas_send(qmid);
+        return QMI_MSG_SUCCESS;
+    }
+}
+
+//No return value needed, as no action will be taken if this message is not
+//correct
+static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t result = *((uint16_t*) (tlv+1));
+
+    if(result == QMI_RESULT_FAILURE)
+        return;
+}
+
+uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    uint8_t retval = QMI_MSG_IGNORE;
+
+    switch(qmi_hdr->message_id){
+        case QMI_NAS_INDICATION_REGISTER:
+            retval = qmi_nas_handle_ind_reg_reply(qmid);
+            break;
+        case QMI_NAS_GET_SYS_INFO:
+        case QMI_NAS_SYS_INFO_IND:
+            qmi_nas_handle_sys_info(qmid);
+            break;
+        default:
+            fprintf(stderr, "Unknown NAS message\n");
+            break;
+    }
+
+    return retval;
+}

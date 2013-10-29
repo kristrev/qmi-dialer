@@ -54,6 +54,15 @@ static void handle_msg(struct qmi_device *qmid){
             }
 
             break;
+        case QMI_SERVICE_NAS:
+            //This will only happen if I cant set up indications
+            if(qmi_nas_handle_msg(qmid) == QMI_MSG_FAILURE){
+                fprintf(stderr, "Error in handling of NAS messge, "
+                        "aborting\n");
+                qmi_cleanup();
+                exit(EXIT_FAILURE);
+            }
+            break;
         default:
             fprintf(stderr, "Message for non-supported service (%x)\n",
                     qmux_hdr->service_type);

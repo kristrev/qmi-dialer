@@ -18,7 +18,7 @@ enum{
     NAS_IND_REQ,
     //Indication request received, so query system information to check for
     //attached state
-    NAS_SENT_SYS_INFO_QUERY,
+    NAS_SYS_INFO_QUERY,
     //NAS is done (only new messages to send will be specified by a timeout)
     NAS_IDLE,
 };
