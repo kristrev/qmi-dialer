@@ -9,6 +9,7 @@
 #include "qmi_shared.h"
 #include "qmi_helpers.h"
 #include "qmi_device.h"
+#include "qmi_nas.h"
 
 static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
         ssize_t len){
@@ -18,6 +19,11 @@ static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
     //According to spec, transaction id must be non-zero
     if(!qmid->ctl_transaction_id)
         qmid->ctl_transaction_id = 1;
+
+    if(qmi_verbose_logging){
+        fprintf(stderr, "Will send:\n");
+        parse_qmi(buf);
+    }
 
     //+1 is to include marker
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
@@ -40,11 +46,6 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     else
         add_tlv(buf, QMI_CTL_TLV_ALLOC_INFO, sizeof(uint8_t), &service);
 
-    if(qmi_verbose_logging){
-        fprintf(stderr, "Will send (update cid):\n");
-        parse_qmi(buf);
-    }
-
     retval = qmi_ctl_write(qmid, buf, qmux_hdr->length);
 
     if(retval <= 0)
@@ -61,11 +62,6 @@ ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
 
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             QMI_CTL_SYNC);
-
-    if(qmi_verbose_logging){
-        fprintf(stderr, "Will send (send sync):\n");
-        parse_qmi(buf);
-    }
 
     return qmi_ctl_write(qmid, buf, qmux_hdr->length);
 }
@@ -99,6 +95,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
         case QMI_SERVICE_DMS:
             qmid->dms_id = cid;
             qmid->dms_state = NAS_GOT_CID;
+            qmi_nas_send(qmid);
             break;
         case QMI_SERVICE_WDS:
             qmid->wds_id = cid;

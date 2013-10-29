@@ -9,11 +9,17 @@ enum{
     CTL_SYNCED,
 };
 
+//NAS state machine
 enum{
     NAS_INIT = 0,
+    //Got CID (this is the starting point)
     NAS_GOT_CID,
-    NAS_SENT_IND_QUERY,
+    //Indication request is sent
+    NAS_IND_REQ,
+    //Indication request received, so query system information to check for
+    //attached state
     NAS_SENT_SYS_INFO_QUERY,
+    //NAS is done (only new messages to send will be specified by a timeout)
     NAS_IDLE,
 };
 
