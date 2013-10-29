@@ -26,6 +26,10 @@ enum{
 enum{
     WDS_INIT = 0,
     WDS_GOT_CID,
+    WDS_IND_REQ,
+    WDS_DISCONNECTED,
+    WDS_CONNECTING,
+    WDS_CONNECTED,
 };
 
 enum{

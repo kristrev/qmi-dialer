@@ -10,6 +10,7 @@
 #include "qmi_helpers.h"
 #include "qmi_device.h"
 #include "qmi_nas.h"
+#include "qmi_wds.h"
 
 static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
         ssize_t len){
@@ -100,6 +101,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
         case QMI_SERVICE_WDS:
             qmid->wds_id = cid;
             qmid->wds_state = WDS_GOT_CID;
+            qmi_wds_send(qmid);
             break;
         case QMI_SERVICE_NAS:
             qmid->nas_id = cid;
