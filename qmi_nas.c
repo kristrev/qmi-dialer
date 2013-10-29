@@ -150,10 +150,20 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
 
     switch(qmi_hdr->message_id){
         case QMI_NAS_INDICATION_REGISTER:
+            if(qmi_verbose_logging){
+                fprintf(stderr, "Received (NAS):\n");
+                parse_qmi(qmid->buf);
+            }
+
             retval = qmi_nas_handle_ind_req_reply(qmid);
             break;
         case QMI_NAS_GET_SYS_INFO:
         case QMI_NAS_SYS_INFO_IND:
+            if(qmi_verbose_logging){
+                fprintf(stderr, "Received (NAS):\n");
+                parse_qmi(qmid->buf);
+            }
+
             qmi_nas_handle_sys_info(qmid);
             break;
         default:

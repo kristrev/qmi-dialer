@@ -115,10 +115,10 @@ static void read_data(struct qmi_device *qmid){
         qmid->qmux_progress += numbytes;
 
         if(qmid->qmux_progress == qmid->cur_qmux_length){
-            if(qmi_verbose_logging){
+            /*if(qmi_verbose_logging){
                 fprintf(stderr, "Received:\n");
                 parse_qmi(qmid->buf);
-            }
+            }*/
             
             handle_msg(qmid);
             qmid->qmux_progress = 0;

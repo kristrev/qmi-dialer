@@ -144,6 +144,11 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     switch(qmi_hdr->message_id){
         //This one also covers the reply to the set event report
         case QMI_WDS_EVENT_REPORT_IND:
+            if(qmi_verbose_logging){
+                fprintf(stderr, "Received (WDS):\n");
+                parse_qmi(qmid->buf);
+            }
+
             retval = qmi_wds_handle_event_report(qmid);
             if(retval == QMI_MSG_SUCCESS)
                 qmi_wds_send(qmid);

@@ -174,8 +174,10 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
                 break;
             }
 
-            if(qmi_verbose_logging)
+            if(qmi_verbose_logging){
                 fprintf(stdout, "CTL: CID get/release reply\n");
+                parse_qmi(qmid->buf);
+            }
 
             retval = qmi_ctl_handle_cid_reply(qmid);
             break;
@@ -183,8 +185,10 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
             //TODO: I suspected some of these packages are sent by the modem
             //every now and then. Check up on that and perhaps have a check on
             //state
-            if(qmi_verbose_logging)
+            if(qmi_verbose_logging){
                 fprintf(stdout, "CTL: SYNC reply\n");
+                parse_qmi(qmid->buf);
+            }
 
             retval = qmi_ctl_handle_sync_reply(qmid);
             break;
