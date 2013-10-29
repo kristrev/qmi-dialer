@@ -34,6 +34,8 @@ static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_INDICATION_REGISTER);
     add_tlv(buf, QMI_NAS_TLV_IND_SYS_INFO, sizeof(uint8_t), &enable);
+    //TODO: Could be that I do not need any more indications (except signal
+    //strength). WDS gives me current technology
 
     return qmi_ctl_write(qmid, buf, qmux_hdr->length);;
 }
@@ -69,7 +71,7 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
     return retval;
 }
 
-static uint8_t qmi_nas_handle_ind_reg_reply(struct qmi_device *qmid){
+static uint8_t qmi_nas_handle_ind_req_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
@@ -130,7 +132,7 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
             tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     }
 
-    if
+    //if
     //if service && !connected && !connecting
     //connect
     //else if(!service && connected || connecting)
@@ -144,7 +146,7 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
 
     switch(qmi_hdr->message_id){
         case QMI_NAS_INDICATION_REGISTER:
-            retval = qmi_nas_handle_ind_reg_reply(qmid);
+            retval = qmi_nas_handle_ind_req_reply(qmid);
             break;
         case QMI_NAS_GET_SYS_INFO:
         case QMI_NAS_SYS_INFO_IND:
