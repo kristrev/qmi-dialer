@@ -16,6 +16,16 @@
 #define QMI_NAS_TLV_SI_WCDMA_SS         0x13
 #define QMI_NAS_TLV_SI_LTE_SS           0x14
 
+//GSM/WCDMA/LTE/... uses the same structure for service info
+//TODO: CDMA is exception, but not able to test, so postpone implementation
+struct qmi_nas_service_info{
+    uint8_t srv_status;
+    uint8_t true_srv_status;
+    uint8_t is_pre_data_path;
+} __attribute__((packed));
+
+typedef struct qmi_nas_service_info qmi_nas_service_info_t;
+
 struct qmi_device;
 
 //Handle a ctl message. Returns false if something went wrong

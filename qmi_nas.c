@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
+#include <endian.h>
 
 #include "qmi_nas.h"
 #include "qmi_device.h"
@@ -72,7 +73,7 @@ static uint8_t qmi_nas_handle_ind_reg_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
-    uint16_t result = *((uint16_t*) (tlv+1));
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
 
     if(result == QMI_RESULT_FAILURE){
         fprintf(stderr, "Could not register indications\n");
@@ -90,12 +91,50 @@ static uint8_t qmi_nas_handle_ind_reg_reply(struct qmi_device *qmid){
 //correct
 static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
-    qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
-    uint16_t result = *((uint16_t*) (tlv+1));
+    uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+    qmi_nas_service_info_t *qsi = NULL;
+    uint8_t has_service = 0;
 
     if(result == QMI_RESULT_FAILURE)
         return;
+
+    //Remove first tlv
+    tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+
+    //The goal right now is just to check if one is attached (srv_status !=
+    //NO_SERVICE). If so and not connected, start connect. Then I need to figure
+    //out how to only get statistics
+    while(i<tlv_length){
+        if(tlv->type == QMI_NAS_TLV_SI_GSM_SS ||
+                tlv->type == QMI_NAS_TLV_SI_WCDMA_SS ||
+                tlv->type == QMI_NAS_TLV_SI_LTE_SS){
+            qsi = (qmi_nas_service_info_t*) (tlv+1);
+
+            //I only care if one technology gives me service
+            if(qsi->srv_status){
+                if(qmi_verbose_logging)
+                    fprintf(stderr, "Technology %x has service\n", tlv->type);
+                has_service = 1;
+            }
+        }
+
+        i += sizeof(qmi_tlv_t) + tlv->length;
+
+        if(i==tlv_length)
+            break;
+        else
+            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    }
+
+    if
+    //if service && !connected && !connecting
+    //connect
+    //else if(!service && connected || connecting)
+    //disconnect (maybe not needed)
 }
 
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
