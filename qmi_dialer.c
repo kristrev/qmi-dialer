@@ -43,6 +43,11 @@ static void qmi_signal_handler(int signum){
 static void handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
 
+    //Ignore messages arriving before I have got my sync ack
+    if(qmux_hdr->service_type != QMI_SERVICE_CTL &&
+            qmid->ctl_stat != CTL_SYNCED)
+        return;
+
     //TODO: Compress by making qmi_*_handle_msg a function pointer, and then
     //just look up service and store pointer
     switch(qmux_hdr->service_type){
