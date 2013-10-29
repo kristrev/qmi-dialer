@@ -46,7 +46,7 @@ static void handle_msg(struct qmi_device *qmid){
     switch(qmux_hdr->service_type){
         case QMI_SERVICE_CTL:
             //Any error in CTL is critical
-            if(!qmi_ctl_handle_msg(qmid)){
+            if(qmi_ctl_handle_msg(qmid) == QMI_MSG_FAILURE){
                 fprintf(stderr, "Error in handling of control message, "
                         "aborting\n");
                 qmi_cleanup();

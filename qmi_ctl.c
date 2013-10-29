@@ -113,17 +113,29 @@ static bool qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     return true;
 }
 
-static bool qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
+static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
     uint16_t result = *((uint16_t*) (tlv+1));
 
+    //All the "rouge" SYNC messages seem to have transaction_id == 0. Use that
+    //for now, see if it is consistent or not. I know that I only send one sync
+    //message with ID 1, so ignore all SYNC messages that does not have this ID
+    if(qmi_hdr->transaction_id != 1 || qmid->ctl_state == CTL_SYNCED){
+        if(qmi_verbose_logging)
+            fprintf(stderr, "Ignoring sync pacet from modem. %u %u\n",
+                    qmi_hdr->transaction_id, qmid->ctl_state);
+        return QMI_MSG_IGNORE;
+    }
+
     if(result == QMI_RESULT_FAILURE){
         fprintf(stderr, "Sync operation failed\n");
-        return false;
-    } else
-        return true;
+        return QMI_MSG_FAILURE;
+    } else{
+        qmid->ctl_state = CTL_SYNCED;
+        return QMI_MSG_SUCCESS;
+    }
 }
 
 static bool qmi_ctl_request_cid(struct qmi_device *qmid){
@@ -139,14 +151,20 @@ static bool qmi_ctl_request_cid(struct qmi_device *qmid){
     return true;
 }
 
-bool qmi_ctl_handle_msg(struct qmi_device *qmid){
+uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
-    bool retval = false;
+    uint8_t retval;
 
     switch(qmi_hdr->message_id){
         case QMI_CTL_GET_CID:
         case QMI_CTL_RELEASE_CID:
+            //Do not set any values unless I am synced
+            if(qmid->ctl_state == CTL_NOT_SYNCED){
+                retval = QMI_MSG_IGNORE;
+                break;
+            }
+
             if(qmi_verbose_logging)
                 fprintf(stdout, "CTL: CID get/release reply\n");
 
@@ -156,18 +174,18 @@ bool qmi_ctl_handle_msg(struct qmi_device *qmid){
             //TODO: I suspected some of these packages are sent by the modem
             //every now and then. Check up on that and perhaps have a check on
             //state
-
             if(qmi_verbose_logging)
                 fprintf(stdout, "CTL: SYNC reply\n");
 
             retval = qmi_ctl_handle_sync_reply(qmid);
 
-            if(retval)
-                retval = qmi_ctl_request_cid(qmid);
+            //if(retval == QMI_MSG_SUCCESS)
+                //retval = qmi_ctl_request_cid(qmid);
             break;
         default:
             fprintf(stderr, "No handle for message of type %x\n",
                     qmi_hdr->message_id);
+            retval = QMI_MSG_IGNORE;
             break;
     }
 

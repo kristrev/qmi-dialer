@@ -22,7 +22,7 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
         bool release, uint8_t cid);
 
 //Handle a ctl message. Returns false if something went wrong
-bool qmi_ctl_handle_msg(struct qmi_device *qmid);
+uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid);
 
 //Send a sync message to release all CIDs. Propagates return from write()
 ssize_t qmi_ctl_send_sync(struct qmi_device *qmid);

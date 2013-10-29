@@ -17,4 +17,9 @@
 //Variables
 #define QMI_RESULT_SUCCESS  0x0000
 #define QMI_RESULT_FAILURE  0x0001
+
+//Return values for message passing functions
+#define QMI_MSG_SUCCESS     0x0
+#define QMI_MSG_FAILURE     0x1
+#define QMI_MSG_IGNORE      0x2
 #endif

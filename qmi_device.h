@@ -5,10 +5,16 @@
 
 //Different sates for each service type
 enum{
+    CTL_NOT_SYNCED = 0,
+    CTL_SYNCED,
+};
+
+enum{
     NAS_INIT,
     NAS_GOT_CID,
 };
 
+typedef uint8_t ctl_state_t;
 typedef uint8_t nas_state_t;
 typedef uint8_t wds_state_t;
 typedef uint8_t dms_state_t;
@@ -25,6 +31,7 @@ struct qmi_device{
     //According to the documentation (QMI architecture), a control point must
     //increment transaction id for each message it sends.
     uint8_t ctl_transaction_id;
+    ctl_state_t ctl_state;
 
     uint8_t nas_id;
     nas_state_t nas_state;
