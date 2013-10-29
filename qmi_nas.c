@@ -120,7 +120,7 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
             qsi = (qmi_nas_service_info_t*) (tlv+1);
 
             //I only care if one technology gives me service
-            if(qsi->srv_status){
+            if(qsi->srv_status == QMI_NAS_SI_SRV_STATUS_SRV){
                 if(qmi_verbose_logging)
                     fprintf(stderr, "Technology %x has service\n", tlv->type);
                 has_service = 1;

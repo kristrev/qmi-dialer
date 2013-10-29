@@ -27,20 +27,8 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }
 
-static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
-    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
-    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
-    uint8_t enable = 1;
 
-    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
-            qmid->wds_transaction_id, QMI_WDS_SET_EVENT_REPORT);
-    add_tlv(buf, QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND, sizeof(uint8_t), &enable);
-    qmid->wds_state = WDS_IND_REQ;
-
-    return qmi_wds_write(qmid, buf, qmux_hdr->length);
-}
-
-uint8_t qmi_wds_connect(struct qmi_device *qmid){
+static uint8_t qmi_wds_connect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     char *apn = "internet";
@@ -70,6 +58,19 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
         //TODO: Check if this one is really needed
     }
     return 0;
+}
+
+static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+    uint8_t enable = 1;
+
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_SET_EVENT_REPORT);
+    add_tlv(buf, QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND, sizeof(uint8_t), &enable);
+    qmid->wds_state = WDS_IND_REQ;
+
+    return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
 
 uint8_t qmi_wds_send(struct qmi_device *qmid){
@@ -109,6 +110,9 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
 
     //WDS is configured and ready to connect
+    //EventReport is both used as the indication AND the reply for the intial
+    //request. I need to make sure I dont mess up the state, so only set it for
+    //the request (WDS can only move into >= PKT_SRVC_QUERY from here)
     if(qmid->wds_state < WDS_DISCONNECTED){
         qmid->wds_state = WDS_DISCONNECTED;
         retval = QMI_MSG_SUCCESS;

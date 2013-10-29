@@ -106,7 +106,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
         case QMI_SERVICE_NAS:
             qmid->nas_id = cid;
             qmid->nas_state = NAS_GOT_CID;
-            //qmi_nas_send(qmid);
+            qmi_nas_send(qmid);
             break;
         default:
             fprintf(stderr, "CID for service not handled by qmid\n");
