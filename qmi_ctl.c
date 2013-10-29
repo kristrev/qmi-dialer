@@ -71,7 +71,7 @@ ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
 }
 
 //Return false is something went wrong (typically no available CID)
-static bool qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
+static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
@@ -84,7 +84,7 @@ static bool qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     //TODO: Improve logic so that I know which service this is?
     if(le16toh(*result) == QMI_RESULT_FAILURE){
         fprintf(stderr, "Failed to get a CID, aborting\n");
-        return false;
+        return QMI_MSG_FAILURE;
     }
 
     //Get the CID
@@ -110,9 +110,10 @@ static bool qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
             break;
     }
 
-    return true;
+    return QMI_MSG_SUCCESS;
 }
 
+static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid);
 static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
@@ -134,21 +135,26 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
     } else{
         qmid->ctl_state = CTL_SYNCED;
-        return QMI_MSG_SUCCESS;
+        if(qmi_verbose_logging)
+            fprintf(stderr, "Received SYNC reply. Will request CID\n");
+
+        //This can be viewed as the proper start of the dialer. After
+        //getting the sync reply, request cid for each service I will use
+        return qmi_ctl_request_cid(qmid);
     }
 }
 
-static bool qmi_ctl_request_cid(struct qmi_device *qmid){
+static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
     if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
-        return false;
+        return QMI_MSG_FAILURE;
 
     if(qmi_ctl_update_cid(qmid, QMI_SERVICE_WDS, false, 0) <= 0)
-        return false;
+        return QMI_MSG_FAILURE;
 
     if(qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
-        return false;
+        return QMI_MSG_FAILURE;
 
-    return true;
+    return QMI_MSG_SUCCESS;
 }
 
 uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
@@ -178,9 +184,6 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
                 fprintf(stdout, "CTL: SYNC reply\n");
 
             retval = qmi_ctl_handle_sync_reply(qmid);
-
-            //if(retval == QMI_MSG_SUCCESS)
-                //retval = qmi_ctl_request_cid(qmid);
             break;
         default:
             fprintf(stderr, "No handle for message of type %x\n",
