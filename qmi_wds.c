@@ -37,6 +37,8 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
             qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(apn), apn);
 
+    fprintf(stderr, "Will connect to APN %s\n", apn);
+
     //This is so far the only critical write I have. However, I will not do
     //anything right now, the next connect will be controlled by a timeout
     if(qmi_wds_write(qmid, buf, qmux_hdr->length) == qmux_hdr->length + 1){
@@ -136,6 +138,28 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     return retval;
 }
 
+static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+    uint8_t retval = QMI_MSG_IGNORE;
+
+    if(result == QMI_RESULT_FAILURE){
+        printf("Something failed with connection\n");
+        return QMI_MSG_FAILURE;
+    }
+
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    qmid->pkt_data_handle = le32toh(*((uint32_t*) tlv + 1));
+    qmid->wds_state = WDS_CONNECTED;
+
+    fprintf(stderr, "Modem is connected\n");
+
+    return retval;
+}
+
 uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
@@ -152,6 +176,9 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             retval = qmi_wds_handle_event_report(qmid);
             if(retval == QMI_MSG_SUCCESS)
                 qmi_wds_send(qmid);
+            break;
+        case QMI_WDS_START_NETWORK_INTERFACE:
+            retval = qmi_wds_handle_connect(qmid);
             break;
         default:
             fprintf(stderr, "Unknown WDS message\n");

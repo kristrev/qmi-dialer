@@ -50,6 +50,7 @@ struct qmi_device{
     uint16_t cur_qmux_length;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
 
+    //Next byte goes here
     uint8_t has_service;
 
     //Values independent for each service
@@ -69,6 +70,9 @@ struct qmi_device{
     uint8_t dms_id;
     dms_state_t dms_state;
     uint16_t dms_transaction_id;
+
+    //Handle used to stop connection
+    uint32_t pkt_data_handle;
 };
 
 #endif
