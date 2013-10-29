@@ -7,6 +7,7 @@
 #include "qmi_shared.h"
 #include "qmi_hdrs.h"
 #include "qmi_dialer.h"
+#include "qmi_helpers.h"
 
 static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
         ssize_t len){
@@ -57,10 +58,11 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
     switch(qmid->nas_state){
         case NAS_GOT_CID:
         case NAS_IND_REQ:
-            retval = qmi_nas_send_indication_request(qmid);
+            //Failed sends can be dealt with later
+            qmi_nas_send_indication_request(qmid);
             break;
         case NAS_SYS_INFO_QUERY:
-            retval = qmi_nas_req_sys_info(qmid);
+            qmi_nas_req_sys_info(qmid);
             break;
         default:
             fprintf(stderr, "Unknown state");

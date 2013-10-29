@@ -43,6 +43,8 @@ static void qmi_signal_handler(int signum){
 static void handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
 
+    //TODO: Compress by making qmi_*_handle_msg a function pointer, and then
+    //just look up service and store pointer
     switch(qmux_hdr->service_type){
         case QMI_SERVICE_CTL:
             //Any error in CTL is critical
@@ -63,6 +65,13 @@ static void handle_msg(struct qmi_device *qmid){
                 exit(EXIT_FAILURE);
             }
             break;
+        case QMI_SERVICE_WDS:
+            if(qmi_wds_handle_msg(qmid) == QMI_MSG_FAILURE){
+                fprintf(stderr, "Error in handling of WDS message, "
+                        "aborting\n");
+                qmi_cleanup();
+                exit(EXIT_FAILURE);
+            }
         default:
             fprintf(stderr, "Message for non-supported service (%x)\n",
                     qmux_hdr->service_type);
