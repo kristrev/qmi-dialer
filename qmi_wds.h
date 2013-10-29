@@ -18,4 +18,6 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid);
 //Send message based on state in state machine
 uint8_t qmi_wds_send(struct qmi_device *qmid);
 
+//Update a connection based on a change in service or WDS connection
+uint8_t qmi_wds_update_connect(struct qmi_device *qmid);
 #endif

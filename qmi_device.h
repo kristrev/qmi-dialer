@@ -50,6 +50,8 @@ struct qmi_device{
     uint16_t cur_qmux_length;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
 
+    uint8_t has_service;
+
     //Values independent for each service
     //According to the documentation (QMI architecture), a control point must
     //increment transaction id for each message it sends.

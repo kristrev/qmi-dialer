@@ -37,6 +37,7 @@ static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     add_tlv(buf, QMI_NAS_TLV_IND_SYS_INFO, sizeof(uint8_t), &enable);
     //TODO: Could be that I do not need any more indications (except signal
     //strength). WDS gives me current technology
+    qmid->nas_state = NAS_IND_REQ;
 
     return qmi_ctl_write(qmid, buf, qmux_hdr->length);;
 }
@@ -134,11 +135,12 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
             tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     }
 
-    //if
-    //if service && !connected && !connecting
-    //connect
-    //else if(!service && connected || connecting)
-    //disconnect (maybe not needed)
+    //When service changes, call WDS
+    if((!qmid->has_service && has_service) ||
+            (qmid->has_service && !has_service)){
+        qmid->has_service = has_service;
+        qmi_wds_send(qmid);
+    }
 }
 
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){

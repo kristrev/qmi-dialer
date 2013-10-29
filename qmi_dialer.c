@@ -72,6 +72,7 @@ static void handle_msg(struct qmi_device *qmid){
                 qmi_cleanup();
                 exit(EXIT_FAILURE);
             }
+            break;
         default:
             fprintf(stderr, "Message for non-supported service (%x)\n",
                     qmux_hdr->service_type);

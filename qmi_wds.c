@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <assert.h>
+#include <endian.h>
 
 #include "qmi_wds.h"
 #include "qmi_device.h"
@@ -33,8 +34,13 @@ static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_WDS_SET_EVENT_REPORT);
     add_tlv(buf, QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND, sizeof(uint8_t), &enable);
+    qmid->wds_state = WDS_IND_REQ;
 
     return qmi_wds_write(qmid, buf, qmux_hdr->length);;
+}
+
+uint8_t qmi_wds_connect(struct qmi_device *qmid){
+    return 0;
 }
 
 uint8_t qmi_wds_send(struct qmi_device *qmid){
@@ -47,9 +53,51 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
             //before the indications will be set up (timeout)
             qmi_wds_send_set_event_report(qmid);
             break;
+        case WDS_DISCONNECTED:
+            //wds_send also needs to support disconnect, but this function
+            //should only be called from within wds state machine (and only when
+            //disconnected is actually set)
+            printf("qmi_wds_connect will be called\n");
+            break;
         default:
-            fprintf(stderr, "Unknown wds state (send())\n");
-            assert(0);
+            fprintf(stderr, "Nothing to send for WDS\n");
+            break;
+    }
+
+    return retval;
+}
+
+static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+    uint8_t has_service = 0;
+    uint8_t retval = QMI_MSG_IGNORE;
+
+    if(result == QMI_RESULT_FAILURE)
+        return QMI_MSG_FAILURE;
+
+    //WDS is configured and ready to connect
+    if(qmid->wds_state < WDS_DISCONNECTED){
+        qmid->wds_state = WDS_DISCONNECTED;
+        retval = QMI_MSG_SUCCESS;
+    }
+
+    //Remove first tlv
+    tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+
+    while(i<tlv_length){
+        printf("TLV type: %x\n", tlv->type);
+
+        i += sizeof(qmi_tlv_t) + tlv->length;
+
+        if(i==tlv_length)
+            break;
+        else
+            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     }
 
     return retval;
@@ -59,19 +107,18 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     uint8_t retval = QMI_MSG_IGNORE;
-#if 0
+    
     switch(qmi_hdr->message_id){
-        case QMI_NAS_INDICATION_REGISTER:
-            retval = qmi_nas_handle_ind_req_reply(qmid);
-            break;
-        case QMI_NAS_GET_SYS_INFO:
-        case QMI_NAS_SYS_INFO_IND:
-            qmi_nas_handle_sys_info(qmid);
+        //This one also covers the reply to the set event report
+        case QMI_WDS_EVENT_REPORT_IND:
+            retval = qmi_wds_handle_event_report(qmid);
+            if(retval == QMI_MSG_SUCCESS)
+                qmi_wds_send(qmid);
             break;
         default:
-            fprintf(stderr, "Unknown NAS message\n");
+            fprintf(stderr, "Unknown WDS message\n");
             break;
     }
-#endif
+    
     return retval;
 }
