@@ -53,7 +53,15 @@ static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
 }
 
 static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+    uint16_t mode_pref = QMI_NAS_RAT_MODE_PREF_GSM;
 
+    create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
+            qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
+    add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &mode_pref);
+
+    return qmi_ctl_write(qmid, buf, qmux_hdr->length);
 }
 
 //Send message based on state in state machine
@@ -62,6 +70,10 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
 
     switch(qmid->nas_state){
         case NAS_GOT_CID:
+        case NAS_SET_SYSTEM:
+            //TODO: Add check for if(mode != 0) here and allow for fallthrough
+            qmi_nas_set_sys_selection(qmid);
+            break;
         case NAS_IND_REQ:
             //Failed sends can be dealt with later
             qmi_nas_send_indication_request(qmid);
@@ -192,6 +204,8 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
             break;
         default:
             fprintf(stderr, "Unknown NAS message\n");
+
+            parse_qmi(qmid->buf);
             break;
     }
 

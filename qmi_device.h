@@ -14,6 +14,8 @@ enum{
     NAS_INIT = 0,
     //Got CID (this is the starting point)
     NAS_GOT_CID,
+    //Lock to a given mode (optional state)
+    NAS_SET_SYSTEM,
     //Indication request is sent
     NAS_IND_REQ,
     //Indication request received, so query system information to check for

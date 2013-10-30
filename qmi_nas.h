@@ -24,6 +24,11 @@
 //System selection TLV
 #define QMI_NAS_TLV_SS_MODE                     0x11
 
+//System selection mode preference values
+#define QMI_NAS_RAT_MODE_PREF_GSM               0x4
+#define QMI_NAS_RAT_MODE_PREF_UMTS              0x8
+#define QMI_NAS_RAT_MODE_PREF_LTE               0x10
+
 //GSM/WCDMA/LTE/... uses the same structure for service info
 //TODO: CDMA is exception, but not able to test, so postpone implementation
 struct qmi_nas_service_info{
