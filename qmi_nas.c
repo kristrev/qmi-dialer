@@ -52,6 +52,10 @@ static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     return qmi_ctl_write(qmid, buf, qmux_hdr->length);
 }
 
+static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
+
+}
+
 //Send message based on state in state machine
 uint8_t qmi_nas_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;

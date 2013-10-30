@@ -68,7 +68,9 @@ static uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
     add_tlv(buf, QMI_WDS_TLV_SNI_STOP_AUTO_CONNECT, sizeof(uint8_t),
             &enable);
 
-    if(qmi_wds_write(qmid, buf, qmux_hdr->length) == qmux_hdr->length + 1){
+    //TODO: There can't be any partial writes, the file descriptor is in
+    //blocking mode
+    if(qmi_wds_write(qmid, buf, qmux_hdr->length) < 0){
         qmid->wds_state = WDS_DISCONNECTING;
         return QMI_MSG_SUCCESS;
     } else
