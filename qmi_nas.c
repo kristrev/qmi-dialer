@@ -166,6 +166,12 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
 
             qmi_nas_handle_sys_info(qmid);
             break;
+        case QMI_NAS_GET_SERVING_SYSTEM:
+            if(qmi_verbose_logging){
+                fprintf(stderr, "Received (NAS):\n");
+                parse_qmi(qmid->buf);
+            }
+            break;
         default:
             fprintf(stderr, "Unknown NAS message\n");
             break;

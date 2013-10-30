@@ -45,7 +45,7 @@ static void handle_msg(struct qmi_device *qmid){
 
     //Ignore messages arriving before I have got my sync ack
     if(qmux_hdr->service_type != QMI_SERVICE_CTL &&
-            qmid->ctl_stat != CTL_SYNCED)
+            qmid->ctl_state != CTL_SYNCED)
         return;
 
     //TODO: Compress by making qmi_*_handle_msg a function pointer, and then

@@ -5,6 +5,7 @@
 
 //NAS message types 
 #define QMI_NAS_INDICATION_REGISTER     0x0003
+#define QMI_NAS_GET_SERVING_SYSTEM      0x0024
 #define QMI_NAS_GET_SYS_INFO            0x004D
 #define QMI_NAS_SYS_INFO_IND            0x004E
 

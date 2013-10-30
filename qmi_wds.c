@@ -32,10 +32,14 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     char *apn = "internet";
+    uint8_t enable = 1;
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(apn), apn);
+
+    //Try this autoconnect
+    add_tlv(buf, QMI_WDS_TLV_SNI_AUTO_CONNECT, sizeof(uint8_t), &enable);
 
     fprintf(stderr, "Will connect to APN %s\n", apn);
 
@@ -58,6 +62,7 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
                 qmid->wds_state == WDS_CONNECTING) && !qmid->has_service){
         //Lost service, might disconnect
         //TODO: Check if this one is really needed
+        fprintf(stderr, "Should disconnect\n");
     }
     return 0;
 }
@@ -75,6 +80,18 @@ static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
 
+static uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
+        uint8_t enabled){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_SET_AUTOCONNECT_SETTINGS);
+    add_tlv(buf, QMI_WDS_TLV_SAS_SETTING, sizeof(uint8_t), &enabled);
+
+    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+}
+
 uint8_t qmi_wds_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
 
@@ -83,6 +100,7 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
         case WDS_IND_REQ:
             //Failed sends are not that interesting. It will just take longer
             //before the indications will be set up (timeout)
+            qmi_wds_send_update_autoconnect(qmid, 0);
             qmi_wds_send_set_event_report(qmid);
             break;
         case WDS_DISCONNECTED:
@@ -178,6 +196,11 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
                 qmi_wds_send(qmid);
             break;
         case QMI_WDS_START_NETWORK_INTERFACE:
+            if(qmi_verbose_logging){
+                fprintf(stderr, "Received (WDS):\n");
+                parse_qmi(qmid->buf);
+            }
+
             retval = qmi_wds_handle_connect(qmid);
             break;
         default:
