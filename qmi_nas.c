@@ -101,7 +101,7 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
     uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
     qmi_nas_service_info_t *qsi = NULL;
-    uint8_t has_service = 0;
+    uint8_t cur_service = NO_SERVICE;
 
     if(result == QMI_RESULT_FAILURE)
         return;
@@ -113,18 +113,24 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
     //The goal right now is just to check if one is attached (srv_status !=
     //NO_SERVICE). If so and not connected, start connect. Then I need to figure
     //out how to only get statistics
-    while(i<tlv_length){
-        if(tlv->type == QMI_NAS_TLV_SI_GSM_SS ||
-                tlv->type == QMI_NAS_TLV_SI_WCDMA_SS ||
-                tlv->type == QMI_NAS_TLV_SI_LTE_SS){
-            qsi = (qmi_nas_service_info_t*) (tlv+1);
+    //TODO: Assumes mutually exclusive for now, might not always be the case
+    while(i<tlv_length && !cur_service){
+        switch(tlv->type){
+            case QMI_NAS_TLV_SI_GSM_SS:
+            case QMI_NAS_TLV_SI_WCDMA_SS:
+            case QMI_NAS_TLV_SI_LTE_SS:
+                if(tlv->type == QMI_NAS_TLV_SI_GSM_SS)
+                    cur_service = SERVICE_GSM;
+                else if(tlv->type == QMI_NAS_TLV_SI_WCDMA_SS)
+                    cur_service = SERVICE_UMTS;
+                else if(tlv->type == QMI_NAS_TLV_SI_LTE_SS)
+                    cur_service = SERVICE_LTE;
 
-            //I only care if one technology gives me service
-            if(qsi->srv_status == QMI_NAS_SI_SRV_STATUS_SRV){
-                if(qmi_verbose_logging)
-                    fprintf(stderr, "Technology %x has service\n", tlv->type);
-                has_service = 1;
-            }
+                qsi = (qmi_nas_service_info_t*) (tlv+1);
+                
+                if(qsi->srv_status != QMI_NAS_SI_SRV_STATUS_SRV)
+                         cur_service = NO_SERVICE;
+                break;
         }
 
         i += sizeof(qmi_tlv_t) + tlv->length;
@@ -136,9 +142,23 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
     }
 
     //When service changes, call WDS
-    if((!qmid->has_service && has_service) ||
+    /*if((!qmid->has_service && has_service) ||
             (qmid->has_service && !has_service)){
         qmid->has_service = has_service;
+        qmi_wds_update_connect(qmid);
+    }*/
+
+    if(cur_service)
+        fprintf(stderr, "Technology %x has service\n", cur_service);
+    else
+        fprintf(stderr, "No service\n");
+
+    //Lost connection
+    //First case is disconnect, second and third is technology change
+    if((qmid->cur_service && !cur_service) ||
+            (!qmid->cur_service && cur_service) || 
+            (qmid->cur_service && qmid->cur_service != cur_service)){
+        qmid->cur_service = cur_service;
         qmi_wds_update_connect(qmid);
     }
 }

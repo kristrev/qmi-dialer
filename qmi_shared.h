@@ -22,4 +22,9 @@
 #define QMI_MSG_SUCCESS     0x0
 #define QMI_MSG_FAILURE     0x1
 #define QMI_MSG_IGNORE      0x2
+
+//Techology constants (will add more as I look into HSDPA modes)
+#define QMI_TECH_GSM        0x0
+#define QMI_TECH_UMTS       0x1
+#define QMI_TECH_LTE        0x3
 #endif

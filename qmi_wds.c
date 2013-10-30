@@ -39,7 +39,7 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(apn), apn);
 
     //Try this autoconnect
-    add_tlv(buf, QMI_WDS_TLV_SNI_AUTO_CONNECT, sizeof(uint8_t), &enable);
+    //add_tlv(buf, QMI_WDS_TLV_SNI_AUTO_CONNECT, sizeof(uint8_t), &enable);
 
     fprintf(stderr, "Will connect to APN %s\n", apn);
 
@@ -56,14 +56,19 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
     //Establish a new connection if I have service and a connection is not
     //already established, or in progress
     //TODO: Add a check for PIN
-    if(qmid->has_service && qmid->wds_state == WDS_DISCONNECTED){
+    /*if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED){
         qmi_wds_connect(qmid);
     } else if((qmid->wds_state == WDS_CONNECTED ||
-                qmid->wds_state == WDS_CONNECTING) && !qmid->has_service){
+                qmid->wds_state == WDS_CONNECTING) && !qmid->cur_service){
         //Lost service, might disconnect
         //TODO: Check if this one is really needed
         fprintf(stderr, "Should disconnect\n");
-    }
+    }*/
+
+    if(qmid->cur_service)
+        qmi_wds_connect(qmid);
+    else if(!qmid->cur_service && qmid->wds_state >= WDS_CONNECTING)
+        fprintf(stderr, "Should disconnect\n");
     return 0;
 }
 
@@ -100,6 +105,8 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
         case WDS_IND_REQ:
             //Failed sends are not that interesting. It will just take longer
             //before the indications will be set up (timeout)
+            //TODO: Add reset too (applies for NAS and DMS as well). Handle
+            //update_autoconnect better (i.e., handle it)
             qmi_wds_send_update_autoconnect(qmid, 0);
             qmi_wds_send_set_event_report(qmid);
             break;
@@ -108,6 +115,7 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
             //should only be called from within wds state machine (and only when
             //disconnected is actually set)
             printf("qmi_wds_connect will be called\n");
+            qmi_wds_update_connect(qmid);
             break;
         default:
             fprintf(stderr, "Nothing to send for WDS\n");
@@ -123,7 +131,6 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
     uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
-    uint8_t has_service = 0;
     uint8_t retval = QMI_MSG_IGNORE;
 
     if(result == QMI_RESULT_FAILURE)

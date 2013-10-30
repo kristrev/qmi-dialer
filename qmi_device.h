@@ -23,24 +23,39 @@ enum{
     NAS_IDLE,
 };
 
+//WDS state machine
 enum{
     WDS_INIT = 0,
     WDS_GOT_CID,
     WDS_IND_REQ,
+    //Ready to start connection
     WDS_DISCONNECTED,
+    //Connection
     WDS_CONNECTING,
+    //Successful connect. If connection fails, state will jump back to
+    //DISCONNECTED
     WDS_CONNECTED,
 };
 
+//DMS state machine
 enum{
     DMS_INIT = 0,
     DMS_GOT_CID,
+};
+
+//The different values for the current service
+enum{
+    NO_SERVICE = 0,
+    SERVICE_GSM,
+    SERVICE_UMTS,
+    SERVICE_LTE,
 };
 
 typedef uint8_t ctl_state_t;
 typedef uint8_t nas_state_t;
 typedef uint8_t wds_state_t;
 typedef uint8_t dms_state_t;
+typedef uint8_t cur_service_t;
 
 struct qmi_device{
     int32_t qmi_fd;
@@ -51,7 +66,7 @@ struct qmi_device{
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
 
     //Next byte goes here
-    uint8_t has_service;
+    cur_service_t cur_service;
 
     //Values independent for each service
     //According to the documentation (QMI architecture), a control point must
