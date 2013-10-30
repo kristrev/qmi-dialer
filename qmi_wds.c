@@ -172,9 +172,14 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
         retval = QMI_MSG_SUCCESS;
     }
 
-    //Remove first tlv
-    tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
-    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    fprintf(stdout, "Event report\n");
+    parse_qmi(qmid->buf);
+    
+    //Remove first tlv if this message was the result of a request
+    if(qmi_hdr->transaction_id){
+        tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
+        tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    }
 
     while(i<tlv_length){
         printf("TLV type: %x\n", tlv->type);

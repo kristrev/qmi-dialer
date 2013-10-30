@@ -12,7 +12,9 @@
 #define QMI_WDS_SET_AUTOCONNECT_SETTINGS    0x0051
 
 //Event report TLVs
+//This one has a confusing name. It is used to set the indication
 #define QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND  0x15
+#define QMI_WDS_TLV_ER_CUR_DATA_BEARER      0x1D
 
 //START_NETWORK_INTERFACE TLVs
 #define QMI_WDS_TLV_SNI_APN_NAME            0x14
@@ -24,6 +26,26 @@
 
 //SET_AUTOCONNECT_SETTINGS TLVs
 #define QMI_WDS_TLV_SAS_SETTING             0x01
+
+//UMTS RAT flags
+#define QMI_WDS_ER_RAT_WCDMA                0x01
+#define QMI_WDS_ER_RAT_GPRS                 0x02
+#define QMI_WDS_ER_RAT_HSDPA                0x04
+#define QMI_WDS_ER_RAT_HSUPA                0x08
+#define QMI_WDS_ER_RAT_EDGE                 0x10
+#define QMI_WDS_ER_RAT_LTE                  0x20
+#define QMI_WDS_ER_RAT_HSDPA_PLUS           0x40
+#define QMI_WDS_ER_RAT_DC_HSDPA_PLUS        0x80
+#define QMI_WDS_ER_RAT_64_QAM               0x100
+#define QMI_WDS_ER_RAT_TDSCDMA              0x200
+
+struct qmi_wds_cur_db{
+    uint8_t current_nw;
+    uint32_t rat_mask;
+    uint32_t so_mask;
+};
+
+typedef struct qmi_wds_cur_db qmi_wds_cur_db_t;
 
 struct qmi_device;
 
