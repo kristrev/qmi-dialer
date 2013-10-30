@@ -203,9 +203,8 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
             }
             break;
         default:
-            fprintf(stderr, "Unknown NAS message\n");
-
-            parse_qmi(qmid->buf);
+            fprintf(stderr, "Unknown NAS message (type %x)\n",
+                    qmi_hdr->message_id);
             break;
     }
 

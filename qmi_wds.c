@@ -237,8 +237,8 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             retval = qmi_wds_handle_connect(qmid);
             break;
         default:
-            fprintf(stderr, "Unknown WDS message\n");
-            parse_qmi(qmid->buf);
+            fprintf(stderr, "Unknown WDS message (type %x)\n",
+                    qmi_hdr->message_id);
             break;
     }
     
