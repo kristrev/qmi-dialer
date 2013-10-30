@@ -237,6 +237,10 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             }
 
             retval = qmi_wds_handle_event_report(qmid);
+            //Setting up the event report is the only configuration step for
+            //WDS, so check if I can connect. The reason for checking sucess and
+            //not just >0 is the indications that also match
+            //QMI_WDS_EVENT_REPORT_IND.
             if(retval == QMI_MSG_SUCCESS)
                 qmi_wds_send(qmid);
             break;

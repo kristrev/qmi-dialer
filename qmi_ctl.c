@@ -128,7 +128,7 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     //message with ID 1, so ignore all SYNC messages that does not have this ID
     if(qmi_hdr->transaction_id != 1 || qmid->ctl_state == CTL_SYNCED){
         if(qmi_verbose_logging)
-            fprintf(stderr, "Ignoring sync pacet from modem. %u %u\n",
+            fprintf(stderr, "Ignoring sync packet from modem. %u %u\n",
                     qmi_hdr->transaction_id, qmid->ctl_state);
         return QMI_MSG_IGNORE;
     }
@@ -148,6 +148,7 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
 }
 
 static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
+    //TODO: Add to timeout
     if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 

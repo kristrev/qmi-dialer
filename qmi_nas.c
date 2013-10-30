@@ -132,7 +132,7 @@ static uint8_t qmi_nas_handle_ind_req_reply(struct qmi_device *qmid){
 
 //No return value needed, as no action will be taken if this message is not
 //correct
-static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
+static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
@@ -142,10 +142,11 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
     uint8_t cur_service = NO_SERVICE;
 
     //Indications don't have failure TLV and indications are identified by
-    //transaction_id == 0
+    //transaction_id == 0. That means that this is the reply for my initial
+    //sys_info request
     if(qmi_hdr->transaction_id){
         if(result == QMI_RESULT_FAILURE)
-            return;
+            return QMI_MSG_FAILURE;
 
         //Remove first tlv
         tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
@@ -202,6 +203,8 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
     } else
         //Always store updated values
         qmid->cur_service = cur_service;
+
+    return QMI_MSG_SUCCESS;
 }
 
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
@@ -233,13 +236,9 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
                 parse_qmi(qmid->buf);
             }
 
-            qmi_nas_handle_sys_info(qmid);
-            break;
-        case QMI_NAS_GET_SERVING_SYSTEM:
-            if(qmi_verbose_logging){
-                fprintf(stderr, "Received (NAS):\n");
-                parse_qmi(qmid->buf);
-            }
+            //The result TLV is only included in my initial SYS_INFO request. If
+            //something has failed with that request, consider it critical.
+            retval = qmi_nas_handle_sys_info(qmid);
             break;
         default:
             fprintf(stderr, "Unknown NAS message (type %x)\n",
