@@ -4,21 +4,22 @@
 #include <stdint.h>
 
 //NAS message types 
-#define QMI_NAS_INDICATION_REGISTER     0x0003
-#define QMI_NAS_GET_SERVING_SYSTEM      0x0024
-#define QMI_NAS_GET_SYS_INFO            0x004D
-#define QMI_NAS_SYS_INFO_IND            0x004E
+#define QMI_NAS_INDICATION_REGISTER             0x0003
+#define QMI_NAS_GET_SERVING_SYSTEM              0x0024
+#define QMI_NAS_GET_SYS_INFO                    0x004D
+#define QMI_NAS_SYS_INFO_IND                    0x004E
+#define QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE 0x0033
 
 //TLVs
-#define QMI_NAS_TLV_IND_SYS_INFO        0x18
+#define QMI_NAS_TLV_IND_SYS_INFO                0x18
 
 //Sys info TLV
-#define QMI_NAS_TLV_SI_GSM_SS           0x12
-#define QMI_NAS_TLV_SI_WCDMA_SS         0x13
-#define QMI_NAS_TLV_SI_LTE_SS           0x14
+#define QMI_NAS_TLV_SI_GSM_SS                   0x12
+#define QMI_NAS_TLV_SI_WCDMA_SS                 0x13
+#define QMI_NAS_TLV_SI_LTE_SS                   0x14
 
 //Service status info variables
-#define QMI_NAS_SI_SRV_STATUS_SRV       0x02
+#define QMI_NAS_SI_SRV_STATUS_SRV               0x02
 //GSM/WCDMA/LTE/... uses the same structure for service info
 //TODO: CDMA is exception, but not able to test, so postpone implementation
 struct qmi_nas_service_info{
