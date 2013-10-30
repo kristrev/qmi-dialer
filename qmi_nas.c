@@ -55,7 +55,8 @@ static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
 static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
-    //uint16_t mode_pref = QMI_NAS_RAT_MODE_PREF_UMTS;
+    //uint16_t mode_pref = QMI_NAS_RAT_MODE_PREF_LTE;
+    //TODO: Add mode as a paramter, otherwise set to 0xFFFF
     uint16_t mode_pref = 0xFFFF;
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
@@ -73,11 +74,13 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
 
     switch(qmid->nas_state){
         case NAS_GOT_CID:
-        //case NAS_SET_SYSTEM:
+        case NAS_SET_SYSTEM:
             //TODO: Add check for if(mode != 0) here and allow for fallthrough
-         //   qmi_nas_set_sys_selection(qmid);
-         //   break;
+            qmi_nas_set_sys_selection(qmid);
+            break;
         case NAS_IND_REQ:
+            //TEMP
+
             //Failed sends can be dealt with later
             qmi_nas_send_indication_request(qmid);
             break;

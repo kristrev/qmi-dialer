@@ -9,6 +9,9 @@
 #include "qmi_dialer.h"
 #include "qmi_hdrs.h"
 
+//TEMP
+#include "qmi_nas.h"
+
 static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
         ssize_t len){
     //TODO: Only do this if request is sucessful?
@@ -213,6 +216,8 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     qmid->wds_state = WDS_CONNECTED;
 
     fprintf(stderr, "Modem is connected. Handle %x\n", qmid->pkt_data_handle);
+
+    //Send autoconnect in case modem does not support 
     qmi_wds_send_update_autoconnect(qmid, 1);
 
     return retval;
