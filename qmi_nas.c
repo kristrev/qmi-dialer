@@ -132,7 +132,7 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
 
                 qsi = (qmi_nas_service_info_t*) (tlv+1);
                 
-                if(qsi->srv_status != QMI_NAS_SI_SRV_STATUS_SRV)
+                if(qsi->srv_status != QMI_NAS_TLV_SI_SRV_STATUS_SRV)
                          cur_service = NO_SERVICE;
                 break;
         }
