@@ -199,8 +199,12 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         qmi_wds_send_update_autoconnect(qmid, 0);
         qmid->wds_state = WDS_DISCONNECTED;
 
-        //TODO: This is a hack to get the modem to keep trying to connect
+        //TODO: Hack to make application keep trying to connect even if
+        //technology does not change
         qmid->cur_service = NO_SERVICE;
+
+        //Next connection attempt will be decided by timeout or technology
+        //change
         return retval;
     }
 

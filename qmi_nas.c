@@ -55,11 +55,14 @@ static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
 static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
-    uint16_t mode_pref = QMI_NAS_RAT_MODE_PREF_UMTS;
+    //uint16_t mode_pref = QMI_NAS_RAT_MODE_PREF_UMTS;
+    uint16_t mode_pref = 0xFFFF;
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
     add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &mode_pref);
+
+    qmid->nas_state = NAS_SET_SYSTEM;
 
     return qmi_ctl_write(qmid, buf, qmux_hdr->length);
 }
@@ -70,10 +73,10 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
 
     switch(qmid->nas_state){
         case NAS_GOT_CID:
-        case NAS_SET_SYSTEM:
+        //case NAS_SET_SYSTEM:
             //TODO: Add check for if(mode != 0) here and allow for fallthrough
-            qmi_nas_set_sys_selection(qmid);
-            break;
+         //   qmi_nas_set_sys_selection(qmid);
+         //   break;
         case NAS_IND_REQ:
             //Failed sends can be dealt with later
             qmi_nas_send_indication_request(qmid);
@@ -155,7 +158,6 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
             case QMI_NAS_TLV_SI_GSM_SS:
             case QMI_NAS_TLV_SI_WCDMA_SS:
             case QMI_NAS_TLV_SI_LTE_SS:
-                fprintf(stdout, "Check %x\n", tlv->type);
                 if(tlv->type == QMI_NAS_TLV_SI_GSM_SS)
                     cur_service = SERVICE_GSM;
                 else if(tlv->type == QMI_NAS_TLV_SI_WCDMA_SS)
@@ -163,13 +165,10 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
                 else if(tlv->type == QMI_NAS_TLV_SI_LTE_SS)
                     cur_service = SERVICE_LTE;
 
-                fprintf(stdout, "Service %x\n", cur_service);
 
                 qsi = (qmi_nas_service_info_t*) (tlv+1);
                
-                fprintf(stdout, "%x %x\n", qsi->srv_status, qsi->true_srv_status);
-                if(qsi->srv_status != QMI_NAS_TLV_SI_SRV_STATUS_SRV &&
-                        qsi->true_srv_status != QMI_NAS_TLV_SI_SRV_STATUS_SRV)
+                if(qsi->srv_status != QMI_NAS_TLV_SI_SRV_STATUS_SRV)
                          cur_service = NO_SERVICE;
                 break;
         }
@@ -187,6 +186,8 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
                 qmid->cur_service, cur_service);
     else if(!cur_service)
         fprintf(stderr, "No service\n");
+    else
+        fprintf(stderr, "Technolog is %x\n", cur_service);
 
     //Lost connection
     //Update connection when I either get or lose service. Any technology change
@@ -195,7 +196,9 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
             (!qmid->cur_service && cur_service)){
         qmid->cur_service = cur_service;
         qmi_wds_update_connect(qmid);
-    }
+    } else
+        //Always store updated values
+        qmid->cur_service = cur_service;
 }
 
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
