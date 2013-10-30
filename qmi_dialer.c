@@ -12,12 +12,20 @@
 #include "qmi_device.h"
 #include "qmi_ctl.h"
 #include "qmi_hdrs.h"
+#include "qmi_wds.h"
 
 //Define this variable globally (within scope of this file), so that I can
 //access it from the signal handler
 static struct qmi_device qmid;
 
 static void qmi_cleanup(){
+    //Disconnect connection (if any)
+    if(qmid.pkt_data_handle){
+        qmid.cur_service = NO_SERVICE;
+        qmi_wds_update_connect(&qmid);
+    }
+
+    //Release all CID. It is nice to be important, but more important to be nice
     if(qmid.nas_id)
         qmi_ctl_update_cid(&qmid, QMI_SERVICE_NAS, true, qmid.nas_id);
 

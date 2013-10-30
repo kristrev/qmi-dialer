@@ -35,6 +35,7 @@ enum{
     //Successful connect. If connection fails, state will jump back to
     //DISCONNECTED
     WDS_CONNECTED,
+    WDS_DISCONNECTING
 };
 
 //DMS state machine

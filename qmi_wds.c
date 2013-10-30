@@ -55,23 +55,32 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
 }
 
+static uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    uint32_t pkt_data_handle = htole32(qmid->pkt_data_handle);
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_STOP_NETWORK_INTERFACE);
+    add_tlv(buf, QMI_WDS_TLV_SNI_PACKET_HANDLE, sizeof(uint32_t),
+            &pkt_data_handle);
+
+    if(qmi_wds_write(qmid, buf, qmux_hdr->length) == qmux_hdr->length + 1){
+        qmid->wds_state = WDS_DISCONNECTING;
+        return QMI_MSG_SUCCESS;
+    } else
+        return QMI_MSG_FAILURE;
+}
+
 uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
     //Establish a new connection if I have service and a connection is not
     //already established, or in progress
-    //TODO: Add a check for PIN
-    /*if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED){
-        qmi_wds_connect(qmid);
-    } else if((qmid->wds_state == WDS_CONNECTED ||
-                qmid->wds_state == WDS_CONNECTING) && !qmid->cur_service){
-        //Lost service, might disconnect
-        //TODO: Check if this one is really needed
-        fprintf(stderr, "Should disconnect\n");
-    }*/
-
-    if(qmid->cur_service)
+    uint8_t retval = 0;
+ 
+    if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED)
         qmi_wds_connect(qmid);
     else if(!qmid->cur_service && qmid->wds_state >= WDS_CONNECTING)
-        fprintf(stderr, "Should disconnect\n");
+        qmi_wds_disconnect(qmid);
     return 0;
 }
 
@@ -180,10 +189,10 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     }
 
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
-    qmid->pkt_data_handle = le32toh(*((uint32_t*) tlv + 1));
+    qmid->pkt_data_handle = le32toh(*((uint32_t*) (tlv + 1)));
     qmid->wds_state = WDS_CONNECTED;
 
-    fprintf(stderr, "Modem is connected\n");
+    fprintf(stderr, "Modem is connected. Handle %x\n", qmid->pkt_data_handle);
     qmi_wds_send_update_autoconnect(qmid, 1);
 
     return retval;
