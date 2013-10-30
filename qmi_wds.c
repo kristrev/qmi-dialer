@@ -188,7 +188,15 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
 
     if(result == QMI_RESULT_FAILURE){
         printf("Something failed with connection\n");
-        return QMI_MSG_FAILURE;
+
+        //Disable autoconnect. This seems to be a required step for getting the
+        //MF821D to work properly with the second connection attempt (otherwise
+        //it ust returns NO_EFFECT). For other modems this should not matter, I
+        //want to be in control of the first connection attempt. Auto connect is
+        //only for moving between HSDPA and LTE, for example
+        qmi_wds_send_update_autoconnect(qmid, 0);
+        qmid->wds_state = WDS_DISCONNECTED;
+        return retval;
     }
 
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
