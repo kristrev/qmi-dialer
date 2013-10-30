@@ -97,6 +97,8 @@ static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     uint8_t enable = 1;
 
+    fprintf(stdout, "Configuring event reports\n");
+
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_SET_EVENT_REPORT);
     add_tlv(buf, QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND, sizeof(uint8_t), &enable);
@@ -109,6 +111,11 @@ uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
         uint8_t enabled){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(enabled)
+        fprintf(stdout, "Enabling autoconnect\n");
+    else
+        fprintf(stdout, "Disabling autoconnect\n");
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_SET_AUTOCONNECT_SETTINGS);
@@ -134,7 +141,7 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
             //wds_send also needs to support disconnect, but this function
             //should only be called from within wds state machine (and only when
             //disconnected is actually set)
-            printf("qmi_wds_connect will be called\n");
+            fprintf(stdout, "Done configuring WDS, will attempt connection\n");
             qmi_wds_update_connect(qmid);
             break;
         default:
@@ -192,7 +199,8 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
 
     if(result == QMI_RESULT_FAILURE){
-        printf("Something failed with connection\n");
+        //TODO: Consider adding the actual error code too
+        fprintf(stderr, "Connection failed\n");
 
         //Disable autoconnect. This seems to be a required step for getting the
         //MF821D to work properly with the second connection attempt (otherwise
@@ -253,8 +261,9 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             retval = qmi_wds_handle_connect(qmid);
             break;
         default:
-            fprintf(stderr, "Unknown WDS message (type %x)\n",
-                    qmi_hdr->message_id);
+            if(qmi_verbose_logging)
+                fprintf(stderr, "Unknown WDS message (type %x)\n",
+                        qmi_hdr->message_id);
             break;
     }
     
