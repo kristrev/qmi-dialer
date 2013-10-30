@@ -198,6 +198,9 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         //only for moving between HSDPA and LTE, for example
         qmi_wds_send_update_autoconnect(qmid, 0);
         qmid->wds_state = WDS_DISCONNECTED;
+
+        //TODO: This is a hack to get the modem to keep trying to connect
+        qmid->cur_service = NO_SERVICE;
         return retval;
     }
 
