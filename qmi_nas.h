@@ -19,7 +19,11 @@
 #define QMI_NAS_TLV_SI_LTE_SS                   0x14
 
 //Service status info variables
-#define QMI_NAS_SI_SRV_STATUS_SRV               0x02
+#define QMI_NAS_TLV_SI_SRV_STATUS_SRV           0x02
+
+//System selection TLV
+#define QMI_NAS_TLV_SS_MODE                     0x11
+
 //GSM/WCDMA/LTE/... uses the same structure for service info
 //TODO: CDMA is exception, but not able to test, so postpone implementation
 struct qmi_nas_service_info{
