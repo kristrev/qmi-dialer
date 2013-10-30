@@ -59,11 +59,14 @@ static uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     uint32_t pkt_data_handle = htole32(qmid->pkt_data_handle);
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+    uint8_t enable = 1;
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_STOP_NETWORK_INTERFACE);
     add_tlv(buf, QMI_WDS_TLV_SNI_PACKET_HANDLE, sizeof(uint32_t),
             &pkt_data_handle);
+    add_tlv(buf, QMI_WDS_TLV_SNI_STOP_AUTO_CONNECT, sizeof(uint8_t),
+            &enable);
 
     if(qmi_wds_write(qmid, buf, qmux_hdr->length) == qmux_hdr->length + 1){
         qmid->wds_state = WDS_DISCONNECTING;
@@ -97,7 +100,7 @@ static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
 
-static uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
+uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
         uint8_t enabled){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;

@@ -20,6 +20,7 @@
 
 //STOP_NETWORK_INTERFACE TLV
 #define QMI_WDS_TLV_SNI_PACKET_HANDLE       0x01
+#define QMI_WDS_TLV_SNI_STOP_AUTO_CONNECT   0x10
 
 //SET_AUTOCONNECT_SETTINGS TLVs
 #define QMI_WDS_TLV_SAS_SETTING             0x01
@@ -28,6 +29,10 @@ struct qmi_device;
 
 //Handle a WDS message. Returns false if something went wrong
 uint8_t qmi_wds_handle_msg(struct qmi_device *qmid);
+
+//Enable/disable autoconnect
+uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
+        uint8_t enabled);
 
 //Send message based on state in state machine
 uint8_t qmi_wds_send(struct qmi_device *qmid);

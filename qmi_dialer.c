@@ -19,7 +19,12 @@
 static struct qmi_device qmid;
 
 static void qmi_cleanup(){
+    uint8_t enable = 0;
+    //Disable autoconnect (in case other applications will use modem)
+    qmi_wds_send_update_autoconnect(&qmid, enable);
+    
     //Disconnect connection (if any)
+    //Beware that some modems, for example MF821D, seems to return NoEffect here
     if(qmid.pkt_data_handle){
         qmid.cur_service = NO_SERVICE;
         qmi_wds_update_connect(&qmid);
