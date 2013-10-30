@@ -39,7 +39,10 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(apn), apn);
 
     //Try this autoconnect
-    //add_tlv(buf, QMI_WDS_TLV_SNI_AUTO_CONNECT, sizeof(uint8_t), &enable);
+    //Use autoconnect for this session. This TLV is deprecated, but seems to be
+    //needed by for example MF821D. For later QMI versions, including this does
+    //not matter as unrecognized TLVs shall be ignored (according to spec)
+    add_tlv(buf, QMI_WDS_TLV_SNI_AUTO_CONNECT, sizeof(uint8_t), &enable);
 
     fprintf(stderr, "Will connect to APN %s\n", apn);
 
@@ -181,6 +184,7 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     qmid->wds_state = WDS_CONNECTED;
 
     fprintf(stderr, "Modem is connected\n");
+    qmi_wds_send_update_autoconnect(qmid, 1);
 
     return retval;
 }
@@ -212,6 +216,7 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             break;
         default:
             fprintf(stderr, "Unknown WDS message\n");
+            parse_qmi(qmid->buf);
             break;
     }
     

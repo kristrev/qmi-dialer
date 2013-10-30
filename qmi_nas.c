@@ -148,16 +148,16 @@ static void qmi_nas_handle_sys_info(struct qmi_device *qmid){
         qmi_wds_update_connect(qmid);
     }*/
 
-    if(cur_service)
-        fprintf(stderr, "Technology %x has service\n", cur_service);
-    else
+    if(cur_service && cur_service != qmid->cur_service)
+        fprintf(stderr, "Technology has changed from %x to %x\n",
+                qmid->cur_service, cur_service);
+    else if(!cur_service)
         fprintf(stderr, "No service\n");
 
     //Lost connection
     //First case is disconnect, second and third is technology change
     if((qmid->cur_service && !cur_service) ||
-            (!qmid->cur_service && cur_service) || 
-            (qmid->cur_service && qmid->cur_service != cur_service)){
+            (!qmid->cur_service && cur_service)){
         qmid->cur_service = cur_service;
         qmi_wds_update_connect(qmid);
     }
