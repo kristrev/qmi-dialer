@@ -43,7 +43,7 @@ struct qmi_wds_cur_db{
     uint8_t current_nw;
     uint32_t rat_mask;
     uint32_t so_mask;
-};
+} __attribute__((packed));
 
 typedef struct qmi_wds_cur_db qmi_wds_cur_db_t;
 

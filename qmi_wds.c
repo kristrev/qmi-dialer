@@ -71,15 +71,19 @@ static uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
     add_tlv(buf, QMI_WDS_TLV_SNI_STOP_AUTO_CONNECT, sizeof(uint8_t),
             &enable);
 
+    fprintf(stderr, "Will disconnect\n");
+
     //TODO: There can't be any partial writes, the file descriptor is in
     //blocking mode
-    if(qmi_wds_write(qmid, buf, qmux_hdr->length) < 0){
-        qmid->wds_state = WDS_DISCONNECTING;
+    if(qmi_wds_write(qmid, buf, qmux_hdr->length)){
+        //TODO: Should perhaps be disconnecting, look into it
+        qmid->wds_state = WDS_DISCONNECTED;
         return QMI_MSG_SUCCESS;
     } else
         return QMI_MSG_FAILURE;
 }
 
+//TODO: Fix return values here
 uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
     //Establish a new connection if I have service and a connection is not
     //already established, or in progress
@@ -87,7 +91,7 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
  
     if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED)
         qmi_wds_connect(qmid);
-    else if(!qmid->cur_service && qmid->wds_state >= WDS_CONNECTING)
+    else if(!qmid->cur_service && qmid->wds_state == WDS_CONNECTED)
         qmi_wds_disconnect(qmid);
     return 0;
 }
@@ -156,6 +160,8 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    qmi_wds_cur_db_t *cur_db = NULL;
+
     uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
     uint8_t retval = QMI_MSG_IGNORE;
@@ -172,8 +178,7 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
         retval = QMI_MSG_SUCCESS;
     }
 
-    fprintf(stdout, "Event report\n");
-    parse_qmi(qmid->buf);
+    fprintf(stdout, "Received an event report\n");
     
     //Remove first tlv if this message was the result of a request
     if(qmi_hdr->transaction_id){
@@ -182,7 +187,8 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     }
 
     while(i<tlv_length){
-        printf("TLV type: %x\n", tlv->type);
+        if(tlv->type == QMI_WDS_TLV_ER_CUR_DATA_BEARER)
+            break;
 
         i += sizeof(qmi_tlv_t) + tlv->length;
 
@@ -192,7 +198,27 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
             tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     }
 
-    return retval;
+    if(i == tlv_length)
+        return retval;
+
+    cur_db = (qmi_wds_cur_db_t*) (tlv+1);
+
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_WCDMA)
+        fprintf(stdout, "Data bearer is WCDMA\n");
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_GPRS)
+        fprintf(stdout, "Data bearer is GPRS\n");
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_HSDPA)
+        fprintf(stdout, "Data bearer is HSDPA\n");
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_HSUPA)
+        fprintf(stdout, "Data bearer is HSUPA\n");
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_EDGE)
+        fprintf(stdout, "Data bearer is EDGE\n");
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_LTE)
+        fprintf(stdout, "Data bearer is LTE\n");
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_HSDPA_PLUS)
+        fprintf(stdout, "Data bearer is HSDPA+\n");
+    if(cur_db->rat_mask & QMI_WDS_ER_RAT_DC_HSDPA_PLUS)
+        fprintf(stdout, "Data bearer is DC_HSDPA+\n");
 }
 
 static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
