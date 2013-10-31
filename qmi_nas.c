@@ -118,6 +118,28 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
     return retval;
 }
 
+static uint8_t qmi_nas_handle_reset(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Received NAS_RESET_RESP\n");
+
+    if(result == QMI_RESULT_FAILURE){
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Could not reset NAS\n");
+        return QMI_MSG_FAILURE;
+    } else {
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "NAS is reset\n");
+        qmid->nas_state = NAS_SET_SYSTEM;
+        qmi_nas_send(qmid);
+        return QMI_MSG_SUCCESS;
+    }
+}
+
 static uint8_t qmi_nas_handle_system_selection(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
@@ -191,6 +213,8 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
         tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     }
 
+    qmid->nas_state = NAS_IDLE;
+
     //The goal right now is just to check if one is attached (srv_status !=
     //NO_SERVICE). If so and not connected, start connect. Then I need to figure
     //out how to only get statistics
@@ -250,6 +274,9 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
 
     switch(qmi_hdr->message_id){
+        case QMI_NAS_RESET:
+            retval = qmi_nas_handle_reset(qmid);
+            break;
         case QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE:
             retval = qmi_nas_handle_system_selection(qmid);
             break;

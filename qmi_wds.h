@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 //Message types
+#define QMI_WDS_RESET                       0x0000
 #define QMI_WDS_SET_EVENT_REPORT            0x0001
 #define QMI_WDS_EVENT_REPORT_IND            QMI_WDS_SET_EVENT_REPORT
 #define QMI_WDS_START_NETWORK_INTERFACE     0x0020

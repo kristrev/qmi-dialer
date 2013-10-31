@@ -30,7 +30,6 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }
 
-
 static uint8_t qmi_wds_connect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
@@ -98,6 +97,20 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
     return 0;
 }
 
+static uint8_t qmi_wds_send_reset(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Resetting WDS\n");
+
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_RESET);
+    qmid->nas_state = WDS_RESET;
+
+    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+}
+
 static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
@@ -137,6 +150,9 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
 
     switch(qmid->wds_state){
         case WDS_GOT_CID:
+        case WDS_RESET:
+            qmi_wds_send_reset(qmid);
+            break;
         case WDS_IND_REQ:
             //Failed sends are not that interesting. It will just take longer
             //before the indications will be set up (timeout)
