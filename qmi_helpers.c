@@ -79,10 +79,10 @@ void parse_qmi(uint8_t *buf){
     qmi_tlv_t *tlv = NULL;
     uint16_t tlv_length = 0;
 
-    QMID_DEBUG_PRINT(stderr, "Complete message:\n");
+    QMID_DEBUG_PRINT(stderr, "Complete message: ");
     for(i=0; i < qmux_hdr->length; i++)
-        QMID_DEBUG_PRINT(stderr, "%.2x:", buf[i]);
-    QMID_DEBUG_PRINT(stderr, "%.2x\n", buf[i]);
+        fprintf(stderr, "%.2x:", buf[i]);
+    fprintf(stderr, "%.2x\n", buf[i]);
 
     QMID_DEBUG_PRINT(stderr, "QMUX:\n");
     QMID_DEBUG_PRINT(stderr, "\tlength: %u\n", qmux_hdr->length);
@@ -119,10 +119,10 @@ void parse_qmi(uint8_t *buf){
         QMID_DEBUG_PRINT(stderr, "\tvalue: ");
         
         for(j=0; j<tlv->length-1; j++)
-            QMID_DEBUG_PRINT(stderr, "%.2x:", tlv_val[j]);
-        QMID_DEBUG_PRINT(stderr, "%.2x", tlv_val[j]);
+            fprintf(stderr, "%.2x:", tlv_val[j]);
+        fprintf(stderr, "%.2x", tlv_val[j]);
 
-        QMID_DEBUG_PRINT(stderr, "\n");
+        fprintf(stderr, "\n");
         i += sizeof(qmi_tlv_t) + tlv->length;
 
         if(i==tlv_length)

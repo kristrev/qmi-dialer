@@ -152,7 +152,7 @@ int main(int argc, char *argv[]){
     struct sigaction sa;
 
     //TODO: Set using command line option
-    qmid_verbose_logging = QMID_LOG_LEVEL_1;
+    qmid_verbose_logging = QMID_LOG_LEVEL_3;
 
     //Use RAII
     memset(&qmid, 0, sizeof(qmid));
