@@ -205,9 +205,11 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
             tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     }
 
-    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1 && cur_service
+            != qmid->cur_service)
         if(cur_service)
-            QMID_DEBUG_PRINT(stdout, "Modem is connected to technology %u\n", cur_service);
+            QMID_DEBUG_PRINT(stdout, "Modem is connected to technology %u\n",
+                    cur_service);
         else
             QMID_DEBUG_PRINT(stdout, "Modem has no service\n");
 

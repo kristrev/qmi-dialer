@@ -161,10 +161,6 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     } else{
         qmid->ctl_state = CTL_SYNCED;
 
-        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
-            QMID_DEBUG_PRINT(stderr, "Received SYNC reply. Will request the "
-                    "CIDs\n");
-
         //This can be viewed as the proper start of the dialer. After
         //getting the sync reply, request cid for each service I will use
         return qmi_ctl_request_cid(qmid);
