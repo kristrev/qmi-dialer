@@ -104,7 +104,7 @@ static void handle_msg(struct qmi_device *qmid){
     }
 }
 
-static void read_data(struct qmi_device *qmid){
+static ssize_t read_data(struct qmi_device *qmid){
     ssize_t numbytes;
     qmux_hdr_t *qmux_hdr;
 
@@ -115,7 +115,12 @@ static void read_data(struct qmi_device *qmid){
         numbytes = read(qmid->qmi_fd, qmid->buf + qmid->qmux_progress,
                 sizeof(qmux_hdr_t));
 
-        if(numbytes != sizeof(qmux_hdr_t)){
+        if(numbytes == -1){
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "Read from device failed\n");
+
+            return numbytes;
+        } else if(numbytes != sizeof(qmux_hdr_t)){
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
                 QMID_DEBUG_PRINT(stderr, "Parial QMUX, length %zd\n", numbytes);
 
@@ -144,6 +149,8 @@ static void read_data(struct qmi_device *qmid){
             qmid->cur_qmux_length = 0;
         }
     }
+
+    return numbytes;
 }
 
 int main(int argc, char *argv[]){
@@ -179,8 +186,14 @@ int main(int argc, char *argv[]){
     qmi_ctl_send_sync(&qmid);
 
     //TODO: Assumes no packet loss. Is that safe?
-    while(1)
-        read_data(&qmid); 
+    while(1){
+        numbytes = read_data(&qmid);
 
-    return EXIT_SUCCESS;
+        if(numbytes == -1)
+            break;
+    }
+
+    //Only gets here if device fails to read from interface
+    qmi_cleanup();
+    return EXIT_FAILURE;
 }

@@ -92,8 +92,10 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
  
     if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED)
         qmi_wds_connect(qmid);
-    else if(!qmid->cur_service && qmid->wds_state == WDS_CONNECTED)
-        qmi_wds_disconnect(qmid);
+    else if(!qmid->cur_service && qmid->wds_state == WDS_CONNECTED){
+        qmid->wds_state = WDS_DISCONNECTED;
+        //qmi_wds_disconnect(qmid);
+    }
     return 0;
 }
 
@@ -210,6 +212,9 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     if(result == QMI_RESULT_FAILURE)
         return QMI_MSG_FAILURE;
 
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Received an EVENT_REPORT_RESP/IND\n");
+
     //WDS is configured and ready to connect
     //EventReport is both used as the indication AND the reply for the intial
     //request. I need to make sure I dont mess up the state, so only set it for
@@ -217,10 +222,8 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     if(qmid->wds_state < WDS_DISCONNECTED){
         qmid->wds_state = WDS_DISCONNECTED;
         retval = QMI_MSG_SUCCESS;
+        qmi_wds_send(qmid);
     }
-    
-    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Received an EVENT_REPORT_RESP/IND\n");
     
     //Remove first tlv if this message was the result of a request
     if(qmi_hdr->transaction_id){
@@ -316,6 +319,7 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
 
     //Send autoconnect in case modem does not support 
     qmi_wds_send_update_autoconnect(qmid, 1);
+    qmid->wds_state = WDS_IDLE;
 
     return retval;
 }
@@ -324,6 +328,9 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     uint8_t retval = QMI_MSG_IGNORE;
+
+    if(qmi_hdr->message_id == 0x0022)
+        parse_qmi(qmid->buf);
 
     switch(qmi_hdr->message_id){
         case QMI_WDS_RESET:
@@ -336,11 +343,12 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             //WDS, so check if I can connect. The reason for checking sucess and
             //not just >0 is the indications that also match
             //QMI_WDS_EVENT_REPORT_IND.
-            if(retval == QMI_MSG_SUCCESS)
-                qmi_wds_send(qmid);
             break;
         case QMI_WDS_START_NETWORK_INTERFACE:
             retval = qmi_wds_handle_connect(qmid);
+            break;
+        case QMI_WDS_GET_PKT_SRVC_STATUS:
+
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)

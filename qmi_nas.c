@@ -254,16 +254,9 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
         else
             QMID_DEBUG_PRINT(stdout, "Modem has no service\n");
 
-    //Lost connection
-    //Update connection when I either get or lose service. Any technology change
-    //should be dealt with by AUTOCONNECT
-    if((qmid->cur_service && !cur_service) ||
-            (!qmid->cur_service && cur_service)){
-        qmid->cur_service = cur_service;
-        qmi_wds_update_connect(qmid);
-    } else
-        //Always store updated values
-        qmid->cur_service = cur_service;
+    //update_connect takes care of the logic related to cur_service
+    qmid->cur_service = cur_service;
+    qmi_wds_update_connect(qmid);
 
     return QMI_MSG_SUCCESS;
 }

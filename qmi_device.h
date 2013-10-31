@@ -40,7 +40,10 @@ enum{
     //Successful connect. If connection fails, state will jump back to
     //DISCONNECTED
     WDS_CONNECTED,
-    WDS_DISCONNECTING
+    WDS_DISCONNECTING,
+    //Since I use autoconnect, I only need to establish the first connection.
+    //Move into IDLE once that is done
+    WDS_IDLE
 };
 
 //DMS state machine
