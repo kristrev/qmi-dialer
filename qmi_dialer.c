@@ -56,6 +56,12 @@ static void qmi_signal_handler(int signum){
 static void handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
 
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_3){
+        QMID_DEBUG_PRINT(stderr, "Received (serivce %x):\n",
+                qmux_hdr->service_type);
+        parse_qmi(qmid->buf);
+    }
+
     //Ignore messages arriving before I have got my sync ack
     if(qmux_hdr->service_type != QMI_SERVICE_CTL &&
             qmid->ctl_state != CTL_SYNCED)
@@ -110,7 +116,7 @@ static void read_data(struct qmi_device *qmid){
                 sizeof(qmux_hdr_t));
 
         if(numbytes != sizeof(qmux_hdr_t)){
-            if(qmi_verbose_logging)
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
                 QMID_DEBUG_PRINT(stderr, "Parial QMUX, length %zd\n", numbytes);
 
             qmid->qmux_progress += numbytes;
@@ -133,11 +139,6 @@ static void read_data(struct qmi_device *qmid){
         qmid->qmux_progress += numbytes;
 
         if(qmid->qmux_progress == qmid->cur_qmux_length){
-            /*if(qmi_verbose_logging){
-                QMID_DEBUG_PRINT(stderr, "Received:\n");
-                parse_qmi(qmid->buf);
-            }*/
-            
             handle_msg(qmid);
             qmid->qmux_progress = 0;
             qmid->cur_qmux_length = 0;
@@ -151,7 +152,7 @@ int main(int argc, char *argv[]){
     struct sigaction sa;
 
     //TODO: Set using command line option
-    qmi_verbose_logging = 0;
+    qmid_verbose_logging = 0;
 
     //Use RAII
     memset(&qmid, 0, sizeof(qmid));

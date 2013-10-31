@@ -40,14 +40,13 @@
 //Log levels
 enum{
     QMID_LOG_LEVEL_NONE = 0, //Only output if application fails
-    QMID_LOG_LEVEL_1, //Output essential information, like connected/disconnected
+    QMID_LOG_LEVEL_1, //Output essential information, like connected/disconnected and technology changes
     QMID_LOG_LEVEL_2, //Output everything the application does (for example msg)
-    QMID_LOG_LEVEL_3, //Output all known packages (type and content)
-    QMID_LOG_LEVEL_4, //Output everything, including unknown packets
-    QMID_LOG_LEVEL_MAX,
+    QMID_LOG_LEVEL_3, //Output all packages (type and content)
+    QMID_LOG_LEVEL_MAX, //This is not merged with top level to easy adding new levels
 };
 
 //Global variable controlling log level (binary for now)
-uint8_t qmi_verbose_logging;
+uint8_t qmid_verbose_logging;
 
 #endif

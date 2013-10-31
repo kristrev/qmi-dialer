@@ -9,7 +9,7 @@
 #include "qmi_dialer.h"
 #include "qmi_helpers.h"
 
-static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
+static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
         ssize_t len){
     //TODO: Only do this if request is sucessful?
     qmid->nas_transaction_id = (qmid->nas_transaction_id + 1) % UINT8_MAX;
@@ -18,8 +18,8 @@ static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
     if(!qmid->nas_transaction_id)
         qmid->nas_transaction_id = 1;
 
-    if(qmi_verbose_logging){
-        QMID_DEBUG_PRINT(stderr, "Will send:\n");
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_3){
+        QMID_DEBUG_PRINT(stderr, "Will send (NAS):\n");
         parse_qmi(buf);
     }
 
@@ -39,21 +39,23 @@ static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     //strength). WDS gives me current technology
     qmid->nas_state = NAS_IND_REQ;
 
-    QMID_DEBUG_PRINT(stdout, "Configuring NAS indications\n");
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Configuring NAS indications\n");
 
-    return qmi_ctl_write(qmid, buf, qmux_hdr->length);;
+    return qmi_nas_write(qmid, buf, qmux_hdr->length);;
 }
 
 static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
-    QMID_DEBUG_PRINT(stdout, "Requesting initial SYS_INFO\n");
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Requesting initial SYS_INFO\n");
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_GET_SYS_INFO);
 
-    return qmi_ctl_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
 
 static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
@@ -63,7 +65,8 @@ static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     //TODO: Add mode as a paramter, otherwise set to 0xFFFF
     uint16_t mode_pref = 0xFFFF;
 
-    QMID_DEBUG_PRINT(stdout, "Setting system selection preference to %x\n", mode_pref);
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        QMID_DEBUG_PRINT(stdout, "Setting system selection preference to %x\n", mode_pref);
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
@@ -71,7 +74,7 @@ static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
 
     qmid->nas_state = NAS_SET_SYSTEM;
 
-    return qmi_ctl_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
 
 //Send message based on state in state machine
@@ -91,9 +94,7 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
         case NAS_SYS_INFO_QUERY:
             qmi_nas_req_sys_info(qmid);
             break;
-        default:
-            QMID_DEBUG_PRINT(stderr, "Unknown state");
-            assert(0);
+        case NAS_IDLE:
             break;
     }
 
@@ -102,15 +103,20 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
 
 static uint8_t qmi_nas_handle_system_selection(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
-    qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
 
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Received SYSTEM_SELECTION_RESP\n");
+
     if(result == QMI_RESULT_FAILURE){
-        QMID_DEBUG_PRINT(stderr, "Could not set system selection\n");
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Could not set system selection\n");
         return QMI_MSG_FAILURE;
     } else {
-        QMID_DEBUG_PRINT(stdout, "Successfully set system selection preference\n");
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stdout, "Successfully set system selection preference\n");
         qmid->nas_state = NAS_IND_REQ;
         qmi_nas_send(qmid);
         return QMI_MSG_SUCCESS;
@@ -119,15 +125,20 @@ static uint8_t qmi_nas_handle_system_selection(struct qmi_device *qmid){
 
 static uint8_t qmi_nas_handle_ind_req_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
-    qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
 
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Received SET_INDICATION_RESP\n");
+
     if(result == QMI_RESULT_FAILURE){
-        QMID_DEBUG_PRINT(stderr, "Could not register indications\n");
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Could not register indications\n");
         return QMI_MSG_FAILURE;
     } else {
-        QMID_DEBUG_PRINT(stdout, "Sucessfully set NAS indications\n");
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stdout, "Sucessfully set NAS indications\n");
 
         qmid->nas_state = NAS_SYS_INFO_QUERY;
         //I don't care about the return value. If something fails, a timeout
@@ -147,6 +158,9 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
     qmi_nas_service_info_t *qsi = NULL;
     uint8_t cur_service = NO_SERVICE;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Received SYS_INFO_RESP/IND\n");
 
     //Indications don't have failure TLV and indications are identified by
     //transaction_id == 0. That means that this is the reply for my initial
@@ -191,10 +205,11 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
             tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     }
 
-    if(cur_service)
-        QMID_DEBUG_PRINT(stdout, "Modem is connected to technology %u\n", cur_service);
-    else
-        QMID_DEBUG_PRINT(stdout, "Modem has no service\n");
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        if(cur_service)
+            QMID_DEBUG_PRINT(stdout, "Modem is connected to technology %u\n", cur_service);
+        else
+            QMID_DEBUG_PRINT(stdout, "Modem has no service\n");
 
     //Lost connection
     //Update connection when I either get or lose service. Any technology change
@@ -217,35 +232,20 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
 
     switch(qmi_hdr->message_id){
         case QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE:
-            if(qmi_verbose_logging){
-                QMID_DEBUG_PRINT(stderr, "Received (NAS):\n");
-                parse_qmi(qmid->buf);
-            }
-
             retval = qmi_nas_handle_system_selection(qmid);
             break;
         case QMI_NAS_INDICATION_REGISTER:
-            if(qmi_verbose_logging){
-                QMID_DEBUG_PRINT(stderr, "Received (NAS):\n");
-                parse_qmi(qmid->buf);
-            }
-
             retval = qmi_nas_handle_ind_req_reply(qmid);
             break;
         case QMI_NAS_GET_SYS_INFO:
         case QMI_NAS_SYS_INFO_IND:
-            if(qmi_verbose_logging){
-                QMID_DEBUG_PRINT(stderr, "Received (NAS):\n");
-                parse_qmi(qmid->buf);
-            }
-
             //The result TLV is only included in my initial SYS_INFO request. If
             //something has failed with that request, consider it critical.
             retval = qmi_nas_handle_sys_info(qmid);
             break;
         default:
-            if(qmi_verbose_logging)
-                QMID_DEBUG_PRINT(stderr, "Unknown NAS message (type %x)\n",
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+                QMID_DEBUG_PRINT(stderr, "Unknown NAS packet of type %x\n",
                         qmi_hdr->message_id);
             break;
     }

@@ -21,8 +21,8 @@ static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
     if(!qmid->ctl_transaction_id)
         qmid->ctl_transaction_id = 1;
 
-    if(qmi_verbose_logging){
-        QMID_DEBUG_PRINT(stderr, "Will send:\n");
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_3){
+        QMID_DEBUG_PRINT(stderr, "Will send (CTL):\n");
         parse_qmi(buf);
     }
 
@@ -42,6 +42,14 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             message_id);
 
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        if(release)
+            QMID_DEBUG_PRINT(stdout, "Releasing CID %x for service %x\n",
+                    cid, service);
+        else
+            QMID_DEBUG_PRINT(stdout, "Requesting CID for service %x\n",
+                    service);
+
     if(release)
         add_tlv(buf, QMI_CTL_TLV_ALLOC_INFO, sizeof(uint16_t), &tlv_value);
     else
@@ -50,7 +58,9 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     retval = qmi_ctl_write(qmid, buf, qmux_hdr->length);
 
     if(retval <= 0)
-        QMID_DEBUG_PRINT(stderr, "Failed to send request for CID for %x\n", service);
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Failed to send request for CID for %x\n",
+                    service);
 
     return retval;
 }
@@ -59,7 +69,8 @@ ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
-    QMID_DEBUG_PRINT(stdout, "Seding sync request\n");
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Seding sync request\n");
 
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             QMI_CTL_SYNC);
@@ -78,9 +89,14 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     //A CID reply has two TLVs. First is always the result of the operation
     result = (uint16_t*) (tlv+1);
 
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Received CID get/release reply\n");
+
     //TODO: Improve logic so that I know which service this is?
     if(le16toh(*result) == QMI_RESULT_FAILURE){
-        QMID_DEBUG_PRINT(stderr, "Failed to get a CID for service %x\n", service);
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Failed to get a CID for service %x\n",
+                    service);
         return QMI_MSG_FAILURE;
     }
 
@@ -89,7 +105,8 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     service = *((uint8_t*) (tlv+1));
     cid = *(((uint8_t*) (tlv+1)) + 1);
 
-    QMID_DEBUG_PRINT(stderr, "Service %x got cid %u\n", service, cid);
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        QMID_DEBUG_PRINT(stderr, "Service %x got cid %u\n", service, cid);
 
     switch(service){
         case QMI_SERVICE_DMS:
@@ -108,7 +125,9 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
             qmi_nas_send(qmid);
             break;
         default:
-            QMID_DEBUG_PRINT(stderr, "CID for service not handled by qmid\n");
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+                QMID_DEBUG_PRINT(stderr, "CID for service not handled by "
+                        "qmid\n");
             break;
     }
 
@@ -122,22 +141,29 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
     uint16_t result = *((uint16_t*) (tlv+1));
 
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Received SYNC reply\n");
+
     //All the "rouge" SYNC messages seem to have transaction_id == 0. Use that
     //for now, see if it is consistent or not. I know that I only send one sync
     //message with ID 1, so ignore all SYNC messages that does not have this ID
     if(qmi_hdr->transaction_id != 1 || qmid->ctl_state == CTL_SYNCED){
-        if(qmi_verbose_logging)
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
             QMID_DEBUG_PRINT(stderr, "Ignoring sync packet from modem. %u %u\n",
                     qmi_hdr->transaction_id, qmid->ctl_state);
         return QMI_MSG_IGNORE;
     }
 
     if(result == QMI_RESULT_FAILURE){
-        QMID_DEBUG_PRINT(stderr, "Sync operation failed\n");
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Sync operation failed\n");
         return QMI_MSG_FAILURE;
     } else{
         qmid->ctl_state = CTL_SYNCED;
-        QMID_DEBUG_PRINT(stderr, "Received SYNC reply. Will request the CIDs\n");
+
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Received SYNC reply. Will request the "
+                    "CIDs\n");
 
         //This can be viewed as the proper start of the dialer. After
         //getting the sync reply, request cid for each service I will use
@@ -173,27 +199,17 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
                 break;
             }
 
-            if(qmi_verbose_logging){
-                QMID_DEBUG_PRINT(stdout, "CTL: CID get/release reply\n");
-                parse_qmi(qmid->buf);
-            }
-
             retval = qmi_ctl_handle_cid_reply(qmid);
             break;
         case QMI_CTL_SYNC:
             //TODO: I suspected some of these packages are sent by the modem
             //every now and then. Check up on that and perhaps have a check on
             //state
-            if(qmi_verbose_logging){
-                QMID_DEBUG_PRINT(stdout, "CTL: SYNC reply\n");
-                parse_qmi(qmid->buf);
-            }
-
             retval = qmi_ctl_handle_sync_reply(qmid);
             break;
         default:
-            if(qmi_verbose_logging)
-                QMID_DEBUG_PRINT(stderr, "No handle for message of type %x\n",
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+                QMID_DEBUG_PRINT(stderr, "Unknown CTL message of type %x\n",
                         qmi_hdr->message_id);
             retval = QMI_MSG_IGNORE;
             break;
