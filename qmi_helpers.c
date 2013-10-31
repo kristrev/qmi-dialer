@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <endian.h>
 
+#include "qmi_dialer.h"
 #include "qmi_hdrs.h"
 #include "qmi_shared.h"
 
@@ -78,33 +79,33 @@ void parse_qmi(uint8_t *buf){
     qmi_tlv_t *tlv = NULL;
     uint16_t tlv_length = 0;
 
-    fprintf(stderr, "Complete message:\n");
+    QMID_DEBUG_PRINT(stderr, "Complete message:\n");
     for(i=0; i < qmux_hdr->length; i++)
-        fprintf(stderr, "%.2x:", buf[i]);
-    fprintf(stderr, "%.2x\n", buf[i]);
+        QMID_DEBUG_PRINT(stderr, "%.2x:", buf[i]);
+    QMID_DEBUG_PRINT(stderr, "%.2x\n", buf[i]);
 
-    fprintf(stderr, "QMUX:\n");
-    fprintf(stderr, "\tlength: %u\n", qmux_hdr->length);
-    fprintf(stderr, "\tflags: 0x%.2x\n", qmux_hdr->control_flags);
-    fprintf(stderr, "\tservice: 0x%.2x\n", qmux_hdr->service_type);
-    fprintf(stderr, "\tclient id: %u\n", qmux_hdr->client_id);
+    QMID_DEBUG_PRINT(stderr, "QMUX:\n");
+    QMID_DEBUG_PRINT(stderr, "\tlength: %u\n", qmux_hdr->length);
+    QMID_DEBUG_PRINT(stderr, "\tflags: 0x%.2x\n", qmux_hdr->control_flags);
+    QMID_DEBUG_PRINT(stderr, "\tservice: 0x%.2x\n", qmux_hdr->service_type);
+    QMID_DEBUG_PRINT(stderr, "\tclient id: %u\n", qmux_hdr->client_id);
 
     if(qmux_hdr->service_type == QMI_SERVICE_CTL){
         qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr+1);
-        fprintf(stderr, "QMI (control):\n");
-        fprintf(stderr, "\tflags: %u\n", qmi_hdr->control_flags >> 1);
-        fprintf(stderr, "\ttransaction id: %u\n", qmi_hdr->transaction_id);
-        fprintf(stderr, "\tmessage type: 0x%.2x\n", qmi_hdr->message_id);
-        fprintf(stderr, "\tlength: %u %x\n", qmi_hdr->length, qmi_hdr->length);
+        QMID_DEBUG_PRINT(stderr, "QMI (control):\n");
+        QMID_DEBUG_PRINT(stderr, "\tflags: %u\n", qmi_hdr->control_flags >> 1);
+        QMID_DEBUG_PRINT(stderr, "\ttransaction id: %u\n", qmi_hdr->transaction_id);
+        QMID_DEBUG_PRINT(stderr, "\tmessage type: 0x%.2x\n", qmi_hdr->message_id);
+        QMID_DEBUG_PRINT(stderr, "\tlength: %u %x\n", qmi_hdr->length, qmi_hdr->length);
         tlv = (qmi_tlv_t *) (qmi_hdr+1);
         tlv_length = qmi_hdr->length;
     } else {
         qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr+1);
-        fprintf(stderr, "QMI (service):\n");
-        fprintf(stderr, "\tflags: %u\n", qmi_hdr->control_flags >> 1);
-        fprintf(stderr, "\ttransaction id: %u\n", qmi_hdr->transaction_id);
-        fprintf(stderr, "\tmessage type: 0x%.2x\n", qmi_hdr->message_id);
-        fprintf(stderr, "\tlength: %u\n", qmi_hdr->length);
+        QMID_DEBUG_PRINT(stderr, "QMI (service):\n");
+        QMID_DEBUG_PRINT(stderr, "\tflags: %u\n", qmi_hdr->control_flags >> 1);
+        QMID_DEBUG_PRINT(stderr, "\ttransaction id: %u\n", qmi_hdr->transaction_id);
+        QMID_DEBUG_PRINT(stderr, "\tmessage type: 0x%.2x\n", qmi_hdr->message_id);
+        QMID_DEBUG_PRINT(stderr, "\tlength: %u\n", qmi_hdr->length);
         tlv = (qmi_tlv_t *) (qmi_hdr+1);
         tlv_length = qmi_hdr->length;
     }
@@ -112,16 +113,16 @@ void parse_qmi(uint8_t *buf){
     i=0;
     while(i<tlv_length){
         tlv_val = (uint8_t*) (tlv+1);
-        fprintf(stderr, "TLV:\n");
-        fprintf(stderr, "\ttype: 0x%.2x\n", tlv->type);
-        fprintf(stderr, "\tlen: %u\n", tlv->length);
-        fprintf(stderr, "\tvalue: ");
+        QMID_DEBUG_PRINT(stderr, "TLV:\n");
+        QMID_DEBUG_PRINT(stderr, "\ttype: 0x%.2x\n", tlv->type);
+        QMID_DEBUG_PRINT(stderr, "\tlen: %u\n", tlv->length);
+        QMID_DEBUG_PRINT(stderr, "\tvalue: ");
         
         for(j=0; j<tlv->length-1; j++)
-            fprintf(stderr, "%.2x:", tlv_val[j]);
-        fprintf(stderr, "%.2x", tlv_val[j]);
+            QMID_DEBUG_PRINT(stderr, "%.2x:", tlv_val[j]);
+        QMID_DEBUG_PRINT(stderr, "%.2x", tlv_val[j]);
 
-        fprintf(stderr, "\n");
+        QMID_DEBUG_PRINT(stderr, "\n");
         i += sizeof(qmi_tlv_t) + tlv->length;
 
         if(i==tlv_length)

@@ -22,7 +22,7 @@ static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
         qmid->ctl_transaction_id = 1;
 
     if(qmi_verbose_logging){
-        fprintf(stderr, "Will send:\n");
+        QMID_DEBUG_PRINT(stderr, "Will send:\n");
         parse_qmi(buf);
     }
 
@@ -50,7 +50,7 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     retval = qmi_ctl_write(qmid, buf, qmux_hdr->length);
 
     if(retval <= 0)
-        fprintf(stderr, "Failed to send request for CID for %x\n", service);
+        QMID_DEBUG_PRINT(stderr, "Failed to send request for CID for %x\n", service);
 
     return retval;
 }
@@ -59,7 +59,7 @@ ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
-    fprintf(stdout, "Seding sync request\n");
+    QMID_DEBUG_PRINT(stdout, "Seding sync request\n");
 
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             QMI_CTL_SYNC);
@@ -80,7 +80,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
 
     //TODO: Improve logic so that I know which service this is?
     if(le16toh(*result) == QMI_RESULT_FAILURE){
-        fprintf(stderr, "Failed to get a CID for service %x\n", service);
+        QMID_DEBUG_PRINT(stderr, "Failed to get a CID for service %x\n", service);
         return QMI_MSG_FAILURE;
     }
 
@@ -89,7 +89,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     service = *((uint8_t*) (tlv+1));
     cid = *(((uint8_t*) (tlv+1)) + 1);
 
-    fprintf(stderr, "Service %x got cid %u\n", service, cid);
+    QMID_DEBUG_PRINT(stderr, "Service %x got cid %u\n", service, cid);
 
     switch(service){
         case QMI_SERVICE_DMS:
@@ -108,7 +108,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
             qmi_nas_send(qmid);
             break;
         default:
-            fprintf(stderr, "CID for service not handled by qmid\n");
+            QMID_DEBUG_PRINT(stderr, "CID for service not handled by qmid\n");
             break;
     }
 
@@ -127,17 +127,17 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     //message with ID 1, so ignore all SYNC messages that does not have this ID
     if(qmi_hdr->transaction_id != 1 || qmid->ctl_state == CTL_SYNCED){
         if(qmi_verbose_logging)
-            fprintf(stderr, "Ignoring sync packet from modem. %u %u\n",
+            QMID_DEBUG_PRINT(stderr, "Ignoring sync packet from modem. %u %u\n",
                     qmi_hdr->transaction_id, qmid->ctl_state);
         return QMI_MSG_IGNORE;
     }
 
     if(result == QMI_RESULT_FAILURE){
-        fprintf(stderr, "Sync operation failed\n");
+        QMID_DEBUG_PRINT(stderr, "Sync operation failed\n");
         return QMI_MSG_FAILURE;
     } else{
         qmid->ctl_state = CTL_SYNCED;
-        fprintf(stderr, "Received SYNC reply. Will request the CIDs\n");
+        QMID_DEBUG_PRINT(stderr, "Received SYNC reply. Will request the CIDs\n");
 
         //This can be viewed as the proper start of the dialer. After
         //getting the sync reply, request cid for each service I will use
@@ -174,7 +174,7 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
             }
 
             if(qmi_verbose_logging){
-                fprintf(stdout, "CTL: CID get/release reply\n");
+                QMID_DEBUG_PRINT(stdout, "CTL: CID get/release reply\n");
                 parse_qmi(qmid->buf);
             }
 
@@ -185,7 +185,7 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
             //every now and then. Check up on that and perhaps have a check on
             //state
             if(qmi_verbose_logging){
-                fprintf(stdout, "CTL: SYNC reply\n");
+                QMID_DEBUG_PRINT(stdout, "CTL: SYNC reply\n");
                 parse_qmi(qmid->buf);
             }
 
@@ -193,7 +193,7 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
             break;
         default:
             if(qmi_verbose_logging)
-                fprintf(stderr, "No handle for message of type %x\n",
+                QMID_DEBUG_PRINT(stderr, "No handle for message of type %x\n",
                         qmi_hdr->message_id);
             retval = QMI_MSG_IGNORE;
             break;

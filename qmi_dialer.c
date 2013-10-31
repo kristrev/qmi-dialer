@@ -67,7 +67,7 @@ static void handle_msg(struct qmi_device *qmid){
         case QMI_SERVICE_CTL:
             //Any error in CTL is critical
             if(qmi_ctl_handle_msg(qmid) == QMI_MSG_FAILURE){
-                fprintf(stderr, "Error in handling of control message, "
+                QMID_DEBUG_PRINT(stderr, "Error in handling of control message, "
                         "aborting\n");
                 qmi_cleanup();
                 exit(EXIT_FAILURE);
@@ -77,7 +77,7 @@ static void handle_msg(struct qmi_device *qmid){
         case QMI_SERVICE_NAS:
             //This will only happen if I cant set up indications
             if(qmi_nas_handle_msg(qmid) == QMI_MSG_FAILURE){
-                fprintf(stderr, "Error in handling of NAS messge, "
+                QMID_DEBUG_PRINT(stderr, "Error in handling of NAS messge, "
                         "aborting\n");
                 qmi_cleanup();
                 exit(EXIT_FAILURE);
@@ -85,14 +85,14 @@ static void handle_msg(struct qmi_device *qmid){
             break;
         case QMI_SERVICE_WDS:
             if(qmi_wds_handle_msg(qmid) == QMI_MSG_FAILURE){
-                fprintf(stderr, "Error in handling of WDS message, "
+                QMID_DEBUG_PRINT(stderr, "Error in handling of WDS message, "
                         "aborting\n");
                 qmi_cleanup();
                 exit(EXIT_FAILURE);
             }
             break;
         default:
-            fprintf(stderr, "Message for non-supported service (%x)\n",
+            QMID_DEBUG_PRINT(stderr, "Message for non-supported service (%x)\n",
                     qmux_hdr->service_type);
             break;
     }
@@ -111,7 +111,7 @@ static void read_data(struct qmi_device *qmid){
 
         if(numbytes != sizeof(qmux_hdr_t)){
             if(qmi_verbose_logging)
-                fprintf(stderr, "Parial QMUX, length %zd\n", numbytes);
+                QMID_DEBUG_PRINT(stderr, "Parial QMUX, length %zd\n", numbytes);
 
             qmid->qmux_progress += numbytes;
         } else {
@@ -134,7 +134,7 @@ static void read_data(struct qmi_device *qmid){
 
         if(qmid->qmux_progress == qmid->cur_qmux_length){
             /*if(qmi_verbose_logging){
-                fprintf(stderr, "Received:\n");
+                QMID_DEBUG_PRINT(stderr, "Received:\n");
                 parse_qmi(qmid->buf);
             }*/
             
