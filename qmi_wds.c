@@ -89,7 +89,11 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
     //Establish a new connection if I have service and a connection is not
     //already established, or in progress
     uint8_t retval = 0;
- 
+
+    //After the first successful connection attempt, AUTOCONNECT will take care
+    //of re-establishing any dropped connections. So only call connect if state
+    //is DISCONNECTED (WDS is moved in IDLE when the first connection is
+    //sucessful)
     if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED)
         qmi_wds_connect(qmid);
     
