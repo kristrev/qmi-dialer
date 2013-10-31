@@ -27,6 +27,20 @@ static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }
 
+static uint8_t qmi_nas_send_reset(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stdout, "Resetting NAS\n");
+
+    create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
+            qmid->nas_transaction_id, QMI_NAS_RESET);
+    qmid->nas_state = NAS_RESET;
+
+    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+}
+
 static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
@@ -83,6 +97,9 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
 
     switch(qmid->nas_state){
         case NAS_GOT_CID:
+        case NAS_RESET:
+            qmi_nas_send_reset(qmid);
+            break;
         case NAS_SET_SYSTEM:
             //TODO: Add check for if(mode != 0) here and allow for fallthrough
             qmi_nas_set_sys_selection(qmid);

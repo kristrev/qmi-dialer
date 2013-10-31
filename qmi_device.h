@@ -14,6 +14,8 @@ enum{
     NAS_INIT = 0,
     //Got CID (this is the starting point)
     NAS_GOT_CID,
+    //Reset NAS before droing any configuration
+    NAS_RESET,
     //Lock to a given mode (optional state)
     NAS_SET_SYSTEM,
     //Indication request is sent
@@ -28,6 +30,7 @@ enum{
 //WDS state machine
 enum{
     WDS_INIT = 0,
+    WDS_RESET,
     WDS_GOT_CID,
     WDS_IND_REQ,
     //Ready to start connection
