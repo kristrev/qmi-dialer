@@ -37,6 +37,16 @@
         QMID_LOG_PREFIX_ARG, ##__VA_ARGS__); \
     } while(0)
 
+//Log levels
+enum{
+    QMID_LOG_LEVEL_NONE = 0, //Only output if application fails
+    QMID_LOG_LEVEL_1, //Output essential information, like connected/disconnected
+    QMID_LOG_LEVEL_2, //Output everything the application does (for example msg)
+    QMID_LOG_LEVEL_3, //Output all known packages (type and content)
+    QMID_LOG_LEVEL_4, //Output everything, including unknown packets
+    QMID_LOG_LEVEL_MAX,
+};
+
 //Global variable controlling log level (binary for now)
 uint8_t qmi_verbose_logging;
 
