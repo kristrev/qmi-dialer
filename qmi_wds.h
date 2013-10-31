@@ -62,4 +62,7 @@ uint8_t qmi_wds_send(struct qmi_device *qmid);
 
 //Update a connection based on a change in service or WDS connection
 uint8_t qmi_wds_update_connect(struct qmi_device *qmid);
+
+//Disconnect is only called when I exit application
+uint8_t qmi_wds_disconnect(struct qmi_device *qmid);
 #endif

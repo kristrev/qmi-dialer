@@ -58,7 +58,7 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
 }
 
-static uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
+uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     uint32_t pkt_data_handle = htole32(qmid->pkt_data_handle);
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
@@ -92,9 +92,7 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
  
     if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED)
         qmi_wds_connect(qmid);
-    else if(!qmid->cur_service && qmid->wds_state == WDS_IDLE){
-        qmi_wds_disconnect(qmid);
-    }
+    
     return 0;
 }
 
@@ -170,6 +168,8 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
                 QMID_DEBUG_PRINT(stdout, "Done configuring WDS, will attempt connection\n");
 
             qmi_wds_update_connect(qmid);
+            break;
+        case WDS_IDLE:
             break;
     }
 

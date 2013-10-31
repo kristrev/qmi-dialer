@@ -27,7 +27,8 @@ static void qmi_cleanup(){
     //Beware that some modems, for example MF821D, seems to return NoEffect here
     if(qmid.pkt_data_handle){
         qmid.cur_service = NO_SERVICE;
-        qmi_wds_update_connect(&qmid);
+        //qmi_wds_update_connect(&qmid);
+        qmi_wds_disconnect(&qmid);
     }
 
     //Release all CID. It is nice to be important, but more important to be nice
