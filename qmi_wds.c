@@ -92,9 +92,8 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
  
     if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED)
         qmi_wds_connect(qmid);
-    else if(!qmid->cur_service && qmid->wds_state == WDS_CONNECTED){
-        qmid->wds_state = WDS_DISCONNECTED;
-        //qmi_wds_disconnect(qmid);
+    else if(!qmid->cur_service && qmid->wds_state == WDS_IDLE){
+        qmi_wds_disconnect(qmid);
     }
     return 0;
 }
