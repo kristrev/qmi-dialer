@@ -82,6 +82,9 @@ void parse_qmi(uint8_t *buf){
     QMID_DEBUG_PRINT(stderr, "Complete message: ");
     for(i=0; i < qmux_hdr->length; i++)
         fprintf(stderr, "%.2x:", buf[i]);
+
+    //I need the last byte, since I have added the marker to the qmux header
+    //(and this byte is not included in length)
     fprintf(stderr, "%.2x\n", buf[i]);
 
     QMID_DEBUG_PRINT(stderr, "QMUX:\n");

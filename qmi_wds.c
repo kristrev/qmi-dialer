@@ -175,6 +175,28 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
     return retval;
 }
 
+static uint8_t qmi_wds_handle_reset(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Received WDS_RESET_RESP\n");
+
+    if(result == QMI_RESULT_FAILURE){
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Could not reset WDS\n");
+        return QMI_MSG_FAILURE;
+    } else {
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "WDS is reset\n");
+        qmid->wds_state = WDS_IND_REQ;
+        qmi_wds_send(qmid);
+        return QMI_MSG_SUCCESS;
+    }
+}
+
 static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
@@ -258,6 +280,7 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
     uint8_t retval = QMI_MSG_IGNORE;
 
+
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Received a START_NETWORK_INTERFACE_RESP\n");
 
@@ -303,6 +326,9 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
 
     switch(qmi_hdr->message_id){
+        case QMI_WDS_RESET:
+            retval = qmi_wds_handle_reset(qmid);
+            break;
         //This one also covers the reply to the set event report
         case QMI_WDS_EVENT_REPORT_IND:
             retval = qmi_wds_handle_event_report(qmid);
@@ -317,7 +343,7 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             retval = qmi_wds_handle_connect(qmid);
             break;
         default:
-            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
                 QMID_DEBUG_PRINT(stderr, "Unknown WDS packet of type %x\n",
                         qmi_hdr->message_id);
             break;

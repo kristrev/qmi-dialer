@@ -204,7 +204,7 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
             retval = qmi_ctl_handle_sync_reply(qmid);
             break;
         default:
-            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
                 QMID_DEBUG_PRINT(stderr, "Unknown CTL message of type %x\n",
                         qmi_hdr->message_id);
             retval = QMI_MSG_IGNORE;
