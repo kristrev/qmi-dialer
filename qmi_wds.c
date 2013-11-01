@@ -104,7 +104,7 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
     return 0;
 }
 
-static uint8_t qmi_wds_send_reset(struct qmi_device *qmid){
+static ssize_t qmi_wds_send_reset(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
@@ -118,7 +118,7 @@ static uint8_t qmi_wds_send_reset(struct qmi_device *qmid){
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
 
-static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
+static ssize_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     uint8_t enable = 1;
@@ -142,8 +142,9 @@ static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
 //because when I restart application, pkt_srvc and sys_info indicates that I
 //have service. However, a connection attempt causes me to loose service and
 //start from the beginning.
-static uint8_t qmi_wds_send_get_pkt_srvc(struct qmi_device *qmid){ uint8_t
-    buf[QMI_DEFAULT_BUF_SIZE]; qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+static ssize_t qmi_wds_send_get_pkt_srvc(struct qmi_device *qmid){ 
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE]; 
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Requesting current packet serivce status\n");
@@ -154,7 +155,7 @@ static uint8_t qmi_wds_send_get_pkt_srvc(struct qmi_device *qmid){ uint8_t
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
 
-uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
+ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
         uint8_t enabled){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
@@ -171,6 +172,20 @@ uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
 
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
+
+static ssize_t qmi_wds_request_data_bearer(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Requesting current data bearer\n");
+
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_GET_DATA_BEARER_TECHNOLOGY);
+
+    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+}
+
 
 uint8_t qmi_wds_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
@@ -342,6 +357,9 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
 
     //Send autoconnect in case modem does not support 
     qmi_wds_send_update_autoconnect(qmid, 1);
+
+    //Request current data bearer (in case I have missed the initial indication)
+    qmi_wds_request_data_bearer(qmid);
     qmid->wds_state = WDS_IDLE;
 
     return retval;
@@ -351,9 +369,6 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     uint8_t retval = QMI_MSG_IGNORE;
-
-    if(qmi_hdr->message_id == 0x0022)
-        parse_qmi(qmid->buf);
 
     switch(qmi_hdr->message_id){
         case QMI_WDS_RESET:

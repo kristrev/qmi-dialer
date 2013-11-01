@@ -10,6 +10,7 @@
 #define QMI_WDS_START_NETWORK_INTERFACE     0x0020
 #define QMI_WDS_STOP_NETWORK_INTERFACE      0x0021
 #define QMI_WDS_GET_PKT_SRVC_STATUS         0x0022
+#define QMI_WDS_GET_DATA_BEARER_TECHNOLOGY  0x0037
 #define QMI_WDS_SET_AUTOCONNECT_SETTINGS    0x0051
 
 //Event report TLVs
@@ -54,7 +55,7 @@ struct qmi_device;
 uint8_t qmi_wds_handle_msg(struct qmi_device *qmid);
 
 //Enable/disable autoconnect
-uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
+ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
         uint8_t enabled);
 
 //Send message based on state in state machine
