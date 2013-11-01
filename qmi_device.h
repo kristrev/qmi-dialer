@@ -72,6 +72,7 @@ typedef uint8_t cur_subservice_t;
 
 struct qmi_device{
     char *dev_path;
+    char *apn_name;
 
     int32_t qmi_fd;
 

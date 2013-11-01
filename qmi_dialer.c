@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <time.h>
+#include <getopt.h>
 
 #include "qmi_dialer.h"
 #include "qmi_device.h"
@@ -263,29 +264,66 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
     }
 }
 
+struct option qmi_options[] = {
+    {"device",  required_argument, NULL, 'd'},
+    {"apn",     required_argument, NULL, 'a'},
+};
+
+static void usage(){
+    fprintf(stderr, "How to run: ./qmid <arguments>\n");
+    fprintf(stderr, "\t--device/-d Path to qmi device (/dev/cdc-wdmX)\n");
+    fprintf(stderr, "\t--apn/-a Apn to connect to\n");
+    fprintf(stderr, "\t-v Verbosity level (up to vvvv)\n");
+}
+
 int main(int argc, char *argv[]){
     //Should also be global, so I can access it in signal handler
     ssize_t numbytes = 0;
     struct sigaction sa;
+    int c = 0;
 
-    //TODO: Set using command line option
-    qmid_verbose_logging = QMID_LOG_LEVEL_2;
-
-    //Use RAII
     memset(&qmid, 0, sizeof(qmid));
-    qmid.ctl_transaction_id = qmid.nas_transaction_id = qmid.wds_transaction_id
-        = qmid.dms_transaction_id = 1;
-
-    qmid.dev_path = argv[1];
-
+   
     //Add signal handler
-    //TODO: Move to separate function
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = qmi_signal_handler;
 
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
 
+    //Parse arguments
+    while(1){
+        c = getopt_long(argc, argv, "hvd:a:", qmi_options, NULL);
+
+        if(c == -1)
+            break;
+
+        switch(c){
+            case 'd':
+                qmid.dev_path = optarg;
+                break;
+            case 'a':
+                qmid.apn_name = optarg;
+                break;
+            case 'v':
+                if(qmid_verbose_logging + 1 < QMID_LOG_LEVEL_MAX)
+                    qmid_verbose_logging++;
+                break;
+            case 'h':
+                usage();
+                exit(EXIT_SUCCESS);
+        }
+    }
+
+    if(qmid.dev_path == NULL || qmid.apn_name == NULL){
+        fprintf(stderr, "Missing required argument\n");
+        usage();
+        exit(EXIT_FAILURE);
+    }
+
+    qmid.ctl_transaction_id = qmid.nas_transaction_id = qmid.wds_transaction_id
+        = qmid.dms_transaction_id = 1;
+    
     if(qmid_open_modem(&qmid) == -1){
         perror("Could not open modem");
         return EXIT_FAILURE;
