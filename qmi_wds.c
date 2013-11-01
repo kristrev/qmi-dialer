@@ -43,7 +43,6 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
             qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(apn), apn);
 
-    //Try this autoconnect
     //Use autoconnect for this session. This TLV is deprecated, but seems to be
     //needed by for example MF821D. For later QMI versions, including this does
     //not matter as unrecognized TLVs shall be ignored (according to spec)
@@ -332,7 +331,7 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
 
         //Disable autoconnect. This seems to be a required step for getting the
         //MF821D to work properly with the second connection attempt (otherwise
-        //it ust returns NO_EFFECT). For other modems this should not matter, I
+        //it just returns NO_EFFECT). For other modems this should not matter, I
         //want to be in control of the first connection attempt. Auto connect is
         //only for moving between HSDPA and LTE, for example
         qmi_wds_send_update_autoconnect(qmid, 0);
