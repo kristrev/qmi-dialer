@@ -71,6 +71,8 @@ typedef uint8_t cur_service_t;
 typedef uint8_t cur_subservice_t;
 
 struct qmi_device{
+    char *dev_path;
+
     int32_t qmi_fd;
 
     //Buffer has to be persistent accross calls to recv

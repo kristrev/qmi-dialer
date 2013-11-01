@@ -275,13 +275,16 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
 
     switch(qmi_hdr->message_id){
         case QMI_NAS_RESET:
-            retval = qmi_nas_handle_reset(qmid);
+            if(qmid->nas_state == NAS_RESET) 
+                retval = qmi_nas_handle_reset(qmid);
             break;
         case QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE:
-            retval = qmi_nas_handle_system_selection(qmid);
+            if(qmid->nas_state == NAS_SET_SYSTEM)
+                retval = qmi_nas_handle_system_selection(qmid);
             break;
         case QMI_NAS_INDICATION_REGISTER:
-            retval = qmi_nas_handle_ind_req_reply(qmid);
+            if(qmid->nas_state == NAS_IND_REQ)
+                retval = qmi_nas_handle_ind_req_reply(qmid);
             break;
         case QMI_NAS_GET_SYS_INFO:
         case QMI_NAS_SYS_INFO_IND:

@@ -82,6 +82,7 @@ uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
     if(qmi_wds_write(qmid, buf, qmux_hdr->length)){
         //TODO: Should perhaps be disconnecting, look into it
         qmid->wds_state = WDS_DISCONNECTED;
+        printf("Disconnected\n");
         return QMI_MSG_SUCCESS;
     } else
         return QMI_MSG_FAILURE;
@@ -194,7 +195,7 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
 
             qmi_wds_update_connect(qmid);
             break;
-        case WDS_IDLE:
+        default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
                 QMID_DEBUG_PRINT(stderr, "Nothing to send for WDS\n");
             break;

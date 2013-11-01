@@ -53,26 +53,50 @@ static void qmi_signal_handler(int signum){
     exit(EXIT_SUCCESS);
 }
 
-static void qmid_handle_timeout(struct qmi_device *qmid){
+static int32_t qmid_open_modem(struct qmi_device *qmid){
+    //This is not nice, add proper processing of arguments later
+    if((qmid->qmi_fd = open(qmid->dev_path, O_RDWR)) == -1)
+        return -1;
+
+    //Send request for CID(s). The rest will then be controlled by messages from
+    //the modem.
+    qmi_ctl_send_sync(qmid);
+    return qmid->qmi_fd;
+}
+
+//Return value of -1 means failure
+//0 means no action is needed
+//>0 means that qmi_fd has been updated
+static int32_t qmid_handle_timeout(struct qmi_device *qmid){
     time_t cur_time = time(NULL);
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stderr, "Handling timeout\n");
+        QMID_DEBUG_PRINT(stderr, "Checking for timeout events\n");
 
     if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
-        if(cur_time - qmid->nas_sent_time >= QMID_TIMEOUT_SEC){
-            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-                QMID_DEBUG_PRINT(stderr, "Checking NAS for missing messages\n");
+        if(cur_time - qmid->nas_sent_time >= QMID_TIMEOUT_SEC)
+            //If IDLE, no messages to send. Everything is indication based after
+            //intial configuration
+            if(qmid->nas_state != NAS_IDLE)
+                qmi_nas_send(qmid);
 
-            qmi_nas_send(qmid);
-        }
+        if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC)
+            if(qmid->wds_state != WDS_IDLE)
+                qmi_wds_send(qmid);
 
-        if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC){
-             if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-                QMID_DEBUG_PRINT(stderr, "Checking WDS for missing messages\n");
+        return 0;
+    } else{
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+            QMID_DEBUG_PRINT(stderr, "CTL took to long to reply, restarting\n");
 
-            qmi_wds_send(qmid);
-        }
+        close(qmid->qmi_fd);
+
+        //Reset parameters
+        qmid->ctl_num_cids = 0;
+        qmid->ctl_transaction_id = qmid->nas_transaction_id =
+            qmid->wds_transaction_id = qmid->dms_transaction_id = 1;
+
+        return qmid_open_modem(qmid);
     }
 }
 
@@ -181,7 +205,7 @@ static ssize_t read_data(struct qmi_device *qmid){
 
 //This method only returns if there has been a critical failure
 static void qmid_run_eventloop(struct qmi_device *qmid){
-    int32_t efd, nfds, sleep_time;
+    int32_t efd, nfds, sleep_time, retval;
     struct epoll_event ev;
     time_t cur_time, next_timeout;
 
@@ -216,7 +240,19 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
 
             return;
         } else if(nfds == 0){
-            qmid_handle_timeout(qmid);
+            retval = qmid_handle_timeout(qmid);
+
+            if(retval == -1){
+                if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                    QMID_DEBUG_PRINT(stderr, 
+                            "Could not reopen modem after timeout, abort\n");
+                return;
+            } else if(retval > 0){
+                ev.events = EPOLLIN;
+                ev.data.fd = qmid->qmi_fd;
+                epoll_ctl(efd, EPOLL_CTL_ADD, qmid->qmi_fd, &ev);
+            }
+
             next_timeout = time(NULL) + 5;
         } else{
             if(read_data(qmid) == -1){
@@ -227,16 +263,6 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
     }
 }
 
-static int32_t qmid_open_modem(struct qmi_device *qmid, char *device){
-    //This is not nice, add proper processing of arguments later
-    if((qmid->qmi_fd = open(device, O_RDWR)) == -1)
-        return -1;
-
-    //Send request for CID(s). The rest will then be controlled by messages from
-    //the modem.
-    qmi_ctl_send_sync(qmid);
-    return 0;
-}
 
 
 int main(int argc, char *argv[]){
@@ -252,6 +278,8 @@ int main(int argc, char *argv[]){
     qmid.ctl_transaction_id = qmid.nas_transaction_id = qmid.wds_transaction_id
         = qmid.dms_transaction_id = 1;
 
+    qmid.dev_path = argv[1];
+
     //Add signal handler
     //TODO: Move to separate function
     memset(&sa, 0, sizeof(sa));
@@ -260,7 +288,7 @@ int main(int argc, char *argv[]){
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
 
-    if(qmid_open_modem(&qmid, argv[1]) == -1){
+    if(qmid_open_modem(&qmid) == -1){
         perror("Could not open modem");
         return EXIT_FAILURE;
     }
