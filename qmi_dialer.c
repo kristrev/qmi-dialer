@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
-
 #include <time.h>
 
 #include "qmi_dialer.h"
@@ -159,8 +158,9 @@ static ssize_t read_data(struct qmi_device *qmid){
 
 //This method only returns if there has been a critical failure
 static void qmid_run_eventloop(struct qmi_device *qmid){
-    int32_t efd, nfds;
+    int32_t efd, nfds, sleep_time;
     struct epoll_event ev;
+    time_t cur_time, next_timeout;
 
     if((efd = epoll_create(1)) == -1){
         perror("epoll_create");
@@ -175,8 +175,17 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
         return;
     }
 
+    next_timeout = time(NULL) + 5;
+
     while(1){
-        nfds = epoll_wait(efd, &ev, 1, -1);
+        cur_time = time(NULL);
+
+        if(cur_time > next_timeout)
+            sleep_time = 0;
+        else
+            sleep_time = next_timeout - cur_time;
+            
+        nfds = epoll_wait(efd, &ev, 1, sleep_time*1000);
 
         if(nfds == -1){
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
@@ -184,7 +193,9 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
 
             return;
         } else if(nfds == 0){
-            fprintf(stderr, "Timeout\n"); 
+            QMID_DEBUG_PRINT(stderr, "Timeout\n");
+
+            next_timeout = time(NULL) + 5;
         } else{
             if(read_data(qmid) == -1){
                 close(qmid->qmi_fd);
