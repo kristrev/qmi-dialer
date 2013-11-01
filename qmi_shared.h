@@ -17,6 +17,10 @@
 #define QMI_SERVICE_DMS         0x02
 #define QMI_SERVICE_NAS         0x03
 
+//Control flags
+#define QMI_CTL_FLAGS_RESP      0x3
+#define QMI_CTL_FLAGS_IND       0x4
+
 //Variables
 #define QMI_RESULT_SUCCESS      0x0000
 #define QMI_RESULT_FAILURE      0x0001

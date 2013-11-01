@@ -208,10 +208,9 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Received SYS_INFO_RESP/IND\n");
 
-    //Indications don't have failure TLV and indications are identified by
-    //transaction_id == 0. That means that this is the reply for my initial
-    //sys_info request
-    if(qmi_hdr->transaction_id){
+    //Indications don't have failure TLV, but responses do. Remove initial TLV
+    //for response
+    if(qmi_hdr->control_flags & QMI_CTL_FLAGS_RESP){
         if(result == QMI_RESULT_FAILURE)
             return QMI_MSG_FAILURE;
 

@@ -29,6 +29,10 @@
 //SET_AUTOCONNECT_SETTINGS TLVs
 #define QMI_WDS_TLV_SAS_SETTING             0x01
 
+//Packet service
+#define QMI_WDS_PSS_DISCONNECTED            0x01
+#define QMI_WDS_PSS_CONNECTED               0x02
+
 //UMTS RAT flags
 #define QMI_WDS_ER_RAT_WCDMA                0x01
 #define QMI_WDS_ER_RAT_GPRS                 0x02

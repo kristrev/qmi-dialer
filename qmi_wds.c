@@ -256,7 +256,8 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     //EventReport is both used as the indication AND the reply for the intial
     //request. I need to make sure I dont mess up the state, so only set it for
     //the request (WDS can only move into >= PKT_SRVC_QUERY from here)
-    if(qmid->wds_state < WDS_DISCONNECTED){
+    //if(qmid->wds_state < WDS_DISCONNECTED){
+    if(qmi_hdr->control_flags & QMI_CTL_FLAGS_RESP){
         qmid->wds_state = WDS_DISCONNECTED;
         retval = QMI_MSG_SUCCESS;
         qmi_wds_send(qmid);
@@ -333,15 +334,21 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         //it just returns NO_EFFECT). For other modems this should not matter, I
         //want to be in control of the first connection attempt. Auto connect is
         //only for moving between HSDPA and LTE, for example
-        qmi_wds_send_update_autoconnect(qmid, 0);
-        qmid->wds_state = WDS_DISCONNECTED;
+        //The WDS connected check is in case autoconnect has kicked in and
+        //worked on some modem (testing the pkt_srvc theory)
+        if(qmid->wds_state != WDS_CONNECTED){
+            qmi_wds_send_update_autoconnect(qmid, 0);
+            qmid->wds_state = WDS_DISCONNECTED;
 
-        //TODO: Hack to make application keep trying to connect even if
-        //technology does not change
-        qmid->cur_service = NO_SERVICE;
+            //TODO: Hack to make application keep trying to connect even if
+            //technology does not change
+            qmid->cur_service = NO_SERVICE;
 
-        //Next connection attempt will be decided by timeout or technology
-        //change
+            //Next connection attempt will be decided by timeout or technology
+            //change
+        } else if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Connection attempt failed, but "
+                    "autoconnected\n");
         return retval;
     }
 
@@ -356,8 +363,6 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     //Send autoconnect in case modem does not support 
     qmi_wds_send_update_autoconnect(qmid, 1);
 
-    //Request current data bearer (in case I have missed the initial indication)
-    qmi_wds_request_data_bearer(qmid);
     qmid->wds_state = WDS_IDLE;
 
     return retval;
@@ -410,10 +415,52 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
     return retval;
 }
 
+static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint8_t retval = QMI_MSG_IGNORE;
+
+    //I am only interested in the first TLV and never request this one
+    uint8_t conn_status = *((uint8_t*) (tlv+1));
+    uint8_t reconn_required = *(((uint8_t*) (tlv+1))+1);
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        QMID_DEBUG_PRINT(stderr, "pkt srvc status: %x reconn: %x\n",
+                conn_status, reconn_required);
+
+    //Some modems, at least the MF821D, seems to behave a bit strange when
+    //service is lost. It seems as if loss of service is announced through 
+    //a SYS_INFO, autoconnect works fine. If it is announced through a packet
+    //service, autconnect does not work. What these checks do is to update the
+    //state machine also based on the packet service messages. Treat PSS_CONNECT
+    //as CONNECTED and other statuses as disconnected.
+    //
+    //This should work and will not race because a packet service message is
+    //always preceeded by a sys info message (at least it seems so). On modems
+    //that do not display the autoconnect-behavior, the connect will fail with
+    //the "NoEffect" and connection be established automatically. On modems with
+    //this cause, connect will work as intended.
+    if(conn_status == QMI_WDS_PSS_CONNECTED){
+        qmid->wds_state = WDS_CONNECTED;
+        //Request current data bearer (in case I have missed the initial
+        //indication)
+        qmi_wds_request_data_bearer(qmid);
+    } else{
+        qmid->wds_state = WDS_DISCONNECTED;
+        qmid->cur_service = 0;
+    }
+
+    return retval;
+}
+
 uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     uint8_t retval = QMI_MSG_IGNORE;
+
+    if(qmi_hdr->message_id == 0x22)
+        parse_qmi(qmid->buf);
 
     switch(qmi_hdr->message_id){
         case QMI_WDS_RESET:
@@ -437,6 +484,9 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
         case QMI_WDS_GET_DATA_BEARER_TECHNOLOGY:
             if(qmid->wds_state == WDS_IDLE)
                 retval = qmi_wds_handle_get_db_tech(qmid);
+            break;
+        case QMI_WDS_GET_PKT_SRVC_STATUS:
+            retval = qmi_wds_handle_pkt_srvc(qmid);
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
