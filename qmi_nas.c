@@ -275,6 +275,17 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
 
     switch(qmi_hdr->message_id){
         case QMI_NAS_RESET:
+            //Guards to make sure I am in the right state when receiving a
+            //message to prevent reordered messages confusing the state machine.
+            //Reordering sometimes occur when qmid is started right after device
+            //is connected.
+            //
+            //Checking for state should be correct. I want to send a request
+            //before I receive a reply. Since packets are processed
+            //sequentially, I know that I can't recieve a reply before a request
+            //is sent. However, I could be unlucky and deal with a delayed
+            //response, so I should in the future add a check for transaction
+            //ID.
             if(qmid->nas_state == NAS_RESET) 
                 retval = qmi_nas_handle_reset(qmid);
             break;

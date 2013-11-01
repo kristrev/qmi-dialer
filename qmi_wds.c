@@ -113,7 +113,7 @@ static uint8_t qmi_wds_send_reset(struct qmi_device *qmid){
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_RESET);
-    qmid->nas_state = WDS_RESET;
+    qmid->wds_state = WDS_RESET;
 
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
@@ -361,10 +361,13 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
 
     switch(qmi_hdr->message_id){
         case QMI_WDS_RESET:
-            retval = qmi_wds_handle_reset(qmid);
+            if(qmid->wds_state == WDS_RESET)
+                retval = qmi_wds_handle_reset(qmid);
             break;
         //This one also covers the reply to the set event report
         case QMI_WDS_EVENT_REPORT_IND:
+            //Adding a guard against reordering here is tricky, since this value
+            //is used both by response and indication. Think some more
             retval = qmi_wds_handle_event_report(qmid);
             //Setting up the event report is the only configuration step for
             //WDS, so check if I can connect. The reason for checking sucess and
@@ -372,7 +375,8 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             //QMI_WDS_EVENT_REPORT_IND.
             break;
         case QMI_WDS_START_NETWORK_INTERFACE:
-            retval = qmi_wds_handle_connect(qmid);
+            if(qmid->wds_state >= WDS_CONNECTING)
+                retval = qmi_wds_handle_connect(qmid);
             break;
         case QMI_WDS_GET_PKT_SRVC_STATUS:
             break;
