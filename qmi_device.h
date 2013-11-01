@@ -88,8 +88,11 @@ struct qmi_device{
     //Values independent for each service
     //According to the documentation (QMI architecture), a control point must
     //increment transaction id for each message it sends.
+    uint8_t ctl_num_cids;
     uint8_t ctl_transaction_id;
     ctl_state_t ctl_state;
+
+    //Insert next byte here
 
     uint8_t nas_id;
     nas_state_t nas_state;

@@ -112,23 +112,33 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
         case QMI_SERVICE_DMS:
             qmid->dms_id = cid;
             qmid->dms_state = DMS_GOT_CID;
+            qmid->ctl_num_cids++;
             //qmi_dms_send(qmid);
             break;
         case QMI_SERVICE_WDS:
             qmid->wds_id = cid;
             qmid->wds_state = WDS_GOT_CID;
-            qmi_wds_send(qmid);
+            qmid->ctl_num_cids++;
+            //qmi_wds_send(qmid);
             break;
         case QMI_SERVICE_NAS:
             qmid->nas_id = cid;
             qmid->nas_state = NAS_GOT_CID;
-            qmi_nas_send(qmid);
+            qmid->ctl_num_cids++;
+            //qmi_nas_send(qmid);
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
                 QMID_DEBUG_PRINT(stderr, "CID for service not handled by "
                         "qmid\n");
             break;
+    }
+
+    //Only start sending when I have received all CIDs
+    if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
+        //qmi_dms_send(qmid);
+        qmi_wds_send(qmid);
+        qmi_nas_send(qmid);
     }
 
     return QMI_MSG_SUCCESS;
