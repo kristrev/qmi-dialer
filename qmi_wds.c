@@ -36,12 +36,12 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
 static uint8_t qmi_wds_connect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
-    char *apn = "internet";
     uint8_t enable = 1;
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
-    add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(apn), apn);
+    add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(qmid->apn_name),
+            qmid->apn_name);
 
     //Use autoconnect for this session. This TLV is deprecated, but seems to be
     //needed by for example MF821D. For later QMI versions, including this does
@@ -49,7 +49,7 @@ static uint8_t qmi_wds_connect(struct qmi_device *qmid){
     add_tlv(buf, QMI_WDS_TLV_SNI_AUTO_CONNECT, sizeof(uint8_t), &enable);
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
-        QMID_DEBUG_PRINT(stderr, "Will connect to APN %s\n", apn);
+        QMID_DEBUG_PRINT(stderr, "Will connect to APN %s\n", qmid->apn_name);
 
     //This is so far the only critical write I have. However, I will not do
     //anything right now, the next connect will be controlled by a timeout
@@ -81,7 +81,6 @@ uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
     if(qmi_wds_write(qmid, buf, qmux_hdr->length)){
         //TODO: Should perhaps be disconnecting, look into it
         qmid->wds_state = WDS_DISCONNECTED;
-        printf("Disconnected\n");
         return QMI_MSG_SUCCESS;
     } else
         return QMI_MSG_FAILURE;
@@ -383,8 +382,6 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
 
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     data_bearer = *((uint8_t*) (tlv+1));
-
-    printf("DB: %x\n", data_bearer);
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         if(data_bearer == QMI_WDS_DB_GSM)
