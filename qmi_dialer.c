@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/epoll.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -156,6 +157,43 @@ static ssize_t read_data(struct qmi_device *qmid){
     return numbytes;
 }
 
+//This method only returns if there has been a critical failure
+static void qmid_run_eventloop(struct qmi_device *qmid){
+    int32_t efd, nfds;
+    struct epoll_event ev;
+
+    if((efd = epoll_create(1)) == -1){
+        perror("epoll_create");
+        return;
+    }
+
+    ev.events = EPOLLIN;
+    ev.data.fd = qmid->qmi_fd;
+
+    if(epoll_ctl(efd, EPOLL_CTL_ADD, qmid->qmi_fd, &ev) == -1){
+        perror("epoll_ctl");
+        return;
+    }
+
+    while(1){
+        nfds = epoll_wait(efd, &ev, 1, -1);
+
+        if(nfds == -1){
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "epoll_wait() failed\n");
+
+            return;
+        } else if(nfds == 0){
+            fprintf(stderr, "Timeout\n"); 
+        } else{
+            if(read_data(qmid) == -1){
+                close(qmid->qmi_fd);
+                return;
+            }
+        }
+    }
+}
+
 static int32_t qmid_open_modem(struct qmi_device *qmid, char *device){
     //This is not nice, add proper processing of arguments later
     if((qmid->qmi_fd = open(device, O_RDWR)) == -1)
@@ -166,6 +204,7 @@ static int32_t qmid_open_modem(struct qmi_device *qmid, char *device){
     qmi_ctl_send_sync(qmid);
     return 0;
 }
+
 
 int main(int argc, char *argv[]){
     //Should also be global, so I can access it in signal handler
@@ -193,13 +232,7 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
 
-    //TODO: Assumes no packet loss. Is that safe?
-    while(1){
-        numbytes = read_data(&qmid);
-
-        if(numbytes == -1)
-            break;
-    }
+    qmid_run_eventloop(&qmid);
 
     //Only gets here if device fails to read from interface
     qmi_cleanup();
