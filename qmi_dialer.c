@@ -263,8 +263,6 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
     }
 }
 
-
-
 int main(int argc, char *argv[]){
     //Should also be global, so I can access it in signal handler
     ssize_t numbytes = 0;

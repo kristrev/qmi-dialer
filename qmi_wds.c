@@ -141,7 +141,8 @@ static ssize_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
 //the modem or get a DHCP reply. It seems like there is a bug in firmware,
 //because when I restart application, pkt_srvc and sys_info indicates that I
 //have service. However, a connection attempt causes me to loose service and
-//start from the beginning.
+//start from the beginning. Similar behavior is not observed with for example
+//the Alcatel OneTouch
 static ssize_t qmi_wds_send_get_pkt_srvc(struct qmi_device *qmid){ 
     uint8_t buf[QMI_DEFAULT_BUF_SIZE]; 
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
@@ -321,7 +322,6 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
     uint8_t retval = QMI_MSG_IGNORE;
 
-
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Received a START_NETWORK_INTERFACE_RESP\n");
 
@@ -365,6 +365,55 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     return retval;
 }
 
+static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+    uint8_t retval = QMI_MSG_IGNORE;
+    uint8_t data_bearer = 0;
+
+    if(result == QMI_RESULT_FAILURE){
+        //TODO: Consider adding the actual error code too
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+            QMID_DEBUG_PRINT(stderr, "Failed to get current data bearer\n");
+
+        return retval;
+    }
+
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    data_bearer = *((uint8_t*) (tlv+1));
+
+    printf("DB: %x\n", data_bearer);
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        if(data_bearer == QMI_WDS_DB_GSM)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is GSM\n");
+        else if(data_bearer == QMI_WDS_DB_UMTS)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is UMTS\n");
+        else if(data_bearer == QMI_WDS_DB_EDGE)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is EDGE\n");
+        else if(data_bearer == QMI_WDS_DB_HSDPA_WCDMA)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA/WCDMA\n");
+        else if(data_bearer == QMI_WDS_DB_WCDMA_HSUPA)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is WCDMA/HSUPA\n");
+        else if(data_bearer == QMI_WDS_DB_HSDPA_HSUPA)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA/HSUPA\n");
+        else if(data_bearer == QMI_WDS_DB_LTE)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is LTE\n");
+        else if(data_bearer == QMI_WDS_DB_HSDPA_PLUS_WCDMA)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA+/WCDMA\n");
+        else if(data_bearer == QMI_WDS_DB_HSDPA_PLUS_HSUPA)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA+/HSUPA\n");
+        else if(data_bearer == QMI_WDS_DB_DC_HSDPA_WCDMA)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is DC-HSDPA+/WCDMA\n");
+        else if(data_bearer == QMI_WDS_DB_DC_HSDPA_HSUPA)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is DC-HSDPA+/HSUPA\n");
+
+    return retval;
+}
+
 uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
@@ -389,7 +438,9 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             if(qmid->wds_state >= WDS_CONNECTING)
                 retval = qmi_wds_handle_connect(qmid);
             break;
-        case QMI_WDS_GET_PKT_SRVC_STATUS:
+        case QMI_WDS_GET_DATA_BEARER_TECHNOLOGY:
+            if(qmid->wds_state == WDS_IDLE)
+                retval = qmi_wds_handle_get_db_tech(qmid);
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)

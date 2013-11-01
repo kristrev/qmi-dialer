@@ -41,6 +41,20 @@
 #define QMI_WDS_ER_RAT_64_QAM               0x100
 #define QMI_WDS_ER_RAT_TDSCDMA              0x200
 
+//Data bearer technology values (which for some reason is different than flags)
+//Only picked the technologies available in Norway
+#define QMI_WDS_DB_GSM                      0x03
+#define QMI_WDS_DB_UMTS                     0x04
+#define QMI_WDS_DB_EDGE                     0x06
+#define QMI_WDS_DB_HSDPA_WCDMA              0x07
+#define QMI_WDS_DB_WCDMA_HSUPA              0x08
+#define QMI_WDS_DB_HSDPA_HSUPA              0x09
+#define QMI_WDS_DB_LTE                      0x0A
+#define QMI_WDS_DB_HSDPA_PLUS_WCDMA         0x0C
+#define QMI_WDS_DB_HSDPA_PLUS_HSUPA         0x0D
+#define QMI_WDS_DB_DC_HSDPA_WCDMA           0x0E
+#define QMI_WDS_DB_DC_HSDPA_HSUPA           0x0F
+
 struct qmi_wds_cur_db{
     uint8_t current_nw;
     uint32_t rat_mask;
