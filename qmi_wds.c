@@ -195,10 +195,6 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
 
             qmi_wds_update_connect(qmid);
             break;
-        default:
-            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-                QMID_DEBUG_PRINT(stderr, "Nothing to send for WDS\n");
-            break;
     }
 
     return retval;
