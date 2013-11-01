@@ -156,6 +156,17 @@ static ssize_t read_data(struct qmi_device *qmid){
     return numbytes;
 }
 
+static int32_t qmid_open_modem(struct qmi_device *qmid, char *device){
+    //This is not nice, add proper processing of arguments later
+    if((qmid->qmi_fd = open(device, O_RDWR)) == -1)
+        return -1;
+
+    //Send request for CID(s). The rest will then be controlled by messages from
+    //the modem.
+    qmi_ctl_send_sync(qmid);
+    return 0;
+}
+
 int main(int argc, char *argv[]){
     //Should also be global, so I can access it in signal handler
     ssize_t numbytes = 0;
@@ -169,12 +180,6 @@ int main(int argc, char *argv[]){
     qmid.ctl_transaction_id = qmid.nas_transaction_id = qmid.wds_transaction_id
         = qmid.dms_transaction_id = 1;
 
-    //This is not nice, add proper processing of arguments later
-    if((qmid.qmi_fd = open(argv[1], O_RDWR)) == -1){
-        perror("Error opening QMI device");
-        return EXIT_FAILURE;
-    }
-
     //Add signal handler
     //TODO: Move to separate function
     memset(&sa, 0, sizeof(sa));
@@ -183,10 +188,10 @@ int main(int argc, char *argv[]){
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
 
-    //Send request for CID(s). The rest will then be controlled by messages from
-    //the modem.
-    //TODO: Error check
-    qmi_ctl_send_sync(&qmid);
+    if(qmid_open_modem(&qmid, argv[1]) == -1){
+        perror("Could not open modem");
+        return EXIT_FAILURE;
+    }
 
     //TODO: Assumes no packet loss. Is that safe?
     while(1){
