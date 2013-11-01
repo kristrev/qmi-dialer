@@ -179,16 +179,13 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
 
 static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
     //TODO: Add to timeout
-    if(!qmid->nas_id &&
-            qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
+    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 
-    if(!qmid->wds_id &&
-            qmi_ctl_update_cid(qmid, QMI_SERVICE_WDS, false, 0) <= 0)
+    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_WDS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 
-    if(!qmid->dms_id &&
-            qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
+    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 
     return QMI_MSG_SUCCESS;
