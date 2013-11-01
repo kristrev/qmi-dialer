@@ -6,6 +6,7 @@
 #define QMI_DEFAULT_BUF_SIZE    0x1000
 
 #define QMID_NUM_SERVICES       3
+#define QMID_TIMEOUT_SEC        5
 
 //I/F type
 #define QMUX_IF_TYPE            0x01

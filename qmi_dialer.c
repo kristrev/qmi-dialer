@@ -53,6 +53,29 @@ static void qmi_signal_handler(int signum){
     exit(EXIT_SUCCESS);
 }
 
+static void qmid_handle_timeout(struct qmi_device *qmid){
+    time_t cur_time = time(NULL);
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Handling timeout\n");
+
+    if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
+        if(cur_time - qmid->nas_sent_time >= QMID_TIMEOUT_SEC){
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+                QMID_DEBUG_PRINT(stderr, "Checking NAS for missing messages\n");
+
+            qmi_nas_send(qmid);
+        }
+
+        if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC){
+             if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+                QMID_DEBUG_PRINT(stderr, "Checking WDS for missing messages\n");
+
+            qmi_wds_send(qmid);
+        }
+    }
+}
+
 //Signal handler for closing down connection and releasing cid
 //Seems like I have to wait for a reply?
 
@@ -193,8 +216,7 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
 
             return;
         } else if(nfds == 0){
-            QMID_DEBUG_PRINT(stderr, "Timeout\n");
-
+            qmid_handle_timeout(qmid);
             next_timeout = time(NULL) + 5;
         } else{
             if(read_data(qmid) == -1){
