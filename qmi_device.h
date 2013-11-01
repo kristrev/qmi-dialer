@@ -1,6 +1,9 @@
 #ifndef QMI_DEVICE_H
 #define QMI_DEVICE_H
 
+#include <stdint.h>
+#include <time.h>
+
 #include "qmi_shared.h"
 
 //Different sates for each service type
@@ -91,14 +94,17 @@ struct qmi_device{
     uint8_t nas_id;
     nas_state_t nas_state;
     uint16_t nas_transaction_id;
+    time_t nas_sent_time;
 
     uint8_t wds_id;
     wds_state_t wds_state;
     uint16_t wds_transaction_id;
+    time_t wds_sent_time;
 
     uint8_t dms_id;
     dms_state_t dms_state;
     uint16_t dms_transaction_id;
+    time_t dms_sent_time;
 
     //Handle used to stop connection
     uint32_t pkt_data_handle;

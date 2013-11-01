@@ -23,6 +23,8 @@ static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
         parse_qmi(buf);
     }
 
+    qmid->wds_sent_time = time(NULL);
+
     //+1 is to include marker
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }

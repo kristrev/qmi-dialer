@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <endian.h>
 #include <string.h>
+#include <time.h>
 
 #include "qmi_wds.h"
 #include "qmi_device.h"
@@ -25,6 +26,8 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
         QMID_DEBUG_PRINT(stderr, "Will send (WDS):\n");
         parse_qmi(buf);
     }
+
+    qmid->wds_sent_time = time(NULL);
 
     //+1 is to include marker
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
