@@ -6,7 +6,7 @@
 #include <time.h> 
 
 #define QMID_LOG_PREFIX "[%d:%d:%d %d/%d/%d %s:%d]: "
-#define QMID_LOG_PREFIX_ARG __FILE__, __LINE__
+#define QMID_LOG_PREFIX_ARG __FILENAME__, __LINE__
 #define QMID_DEBUG_PRINT2(fd, ...){fprintf(fd, __VA_ARGS__);fflush(fd);}
 //The ## is there so that I dont have to fake an argument when I use the macro
 //on string without arguments! It removes the comma and, thus, the macro expands
