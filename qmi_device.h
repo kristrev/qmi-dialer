@@ -65,6 +65,7 @@ typedef uint8_t nas_state_t;
 typedef uint8_t wds_state_t;
 typedef uint8_t dms_state_t;
 typedef uint8_t cur_service_t;
+typedef uint8_t cur_subservice_t;
 
 struct qmi_device{
     int32_t qmi_fd;
@@ -74,8 +75,12 @@ struct qmi_device{
     uint16_t cur_qmux_length;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
 
-    //Next byte goes here
+    //Service is main service (GSM, UMTS, LTE)
+    //Subservice is the type of connection, will only really matter for UMTS
+    //(HSDPA, HSUPA +++). Even though the rat-mask is defined as a int, the
+    //flags I need to store is in the lowest byte
     cur_service_t cur_service;
+    cur_subservice_t cur_subservice;
 
     //Values independent for each service
     //According to the documentation (QMI architecture), a control point must

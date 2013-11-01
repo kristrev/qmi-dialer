@@ -8,6 +8,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <time.h>
+
 #include "qmi_dialer.h"
 #include "qmi_device.h"
 #include "qmi_ctl.h"
