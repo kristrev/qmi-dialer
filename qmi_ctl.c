@@ -44,10 +44,10 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         if(release)
-            QMID_DEBUG_PRINT(stdout, "Releasing CID %x for service %x\n",
+            QMID_DEBUG_PRINT(stderr, "Releasing CID %x for service %x\n",
                     cid, service);
         else
-            QMID_DEBUG_PRINT(stdout, "Requesting CID for service %x\n",
+            QMID_DEBUG_PRINT(stderr, "Requesting CID for service %x\n",
                     service);
 
     if(release)
@@ -70,7 +70,7 @@ ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Seding sync request\n");
+        QMID_DEBUG_PRINT(stderr, "Seding sync request\n");
 
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             QMI_CTL_SYNC);
@@ -90,7 +90,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     result = (uint16_t*) (tlv+1);
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Received CID get/release reply\n");
+        QMID_DEBUG_PRINT(stderr, "Received CID get/release reply\n");
 
     //TODO: Improve logic so that I know which service this is?
     if(le16toh(*result) == QMI_RESULT_FAILURE){
@@ -142,7 +142,7 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     uint16_t result = *((uint16_t*) (tlv+1));
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Received SYNC reply\n");
+        QMID_DEBUG_PRINT(stderr, "Received SYNC reply\n");
 
     //All the "rouge" SYNC messages seem to have transaction_id == 0. Use that
     //for now, see if it is consistent or not. I know that I only send one sync
@@ -169,13 +169,16 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
 
 static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
     //TODO: Add to timeout
-    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
+    if(!qmid->nas_id &&
+            qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 
-    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_WDS, false, 0) <= 0)
+    if(!qmid->wds_id &&
+            qmi_ctl_update_cid(qmid, QMI_SERVICE_WDS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 
-    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
+    if(!qmid->dms_id &&
+            qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 
     return QMI_MSG_SUCCESS;

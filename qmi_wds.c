@@ -105,7 +105,7 @@ static uint8_t qmi_wds_send_reset(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Resetting WDS\n");
+        QMID_DEBUG_PRINT(stderr, "Resetting WDS\n");
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_RESET);
@@ -120,12 +120,32 @@ static uint8_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     uint8_t enable = 1;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Configuring event reports\n");
+        QMID_DEBUG_PRINT(stderr, "Configuring event reports\n");
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_SET_EVENT_REPORT);
     add_tlv(buf, QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND, sizeof(uint8_t), &enable);
     qmid->wds_state = WDS_IND_REQ;
+
+    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+}
+
+//Keep this function for now, even though it is not used. With the MF821D, I see
+//that the modem remains online (according to the LED) even after I send
+//disconnect (when exiting application). However, the connection is for all
+//intensts and purposes dead, it is for example not possible to send data using
+//the modem or get a DHCP reply. It seems like there is a bug in firmware,
+//because when I restart application, pkt_srvc and sys_info indicates that I
+//have service. However, a connection attempt causes me to loose service and
+//start from the beginning.
+static uint8_t qmi_wds_send_get_pkt_srvc(struct qmi_device *qmid){ uint8_t
+    buf[QMI_DEFAULT_BUF_SIZE]; qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+    
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Requesting current packet serivce status\n");
+
+    create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
+            qmid->wds_transaction_id, QMI_WDS_GET_PKT_SRVC_STATUS);
 
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
@@ -137,9 +157,9 @@ uint8_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         if(enabled)
-            QMID_DEBUG_PRINT(stdout, "Enabling autoconnect\n");
+            QMID_DEBUG_PRINT(stderr, "Enabling autoconnect\n");
         else
-            QMID_DEBUG_PRINT(stdout, "Disabling autoconnect\n");
+            QMID_DEBUG_PRINT(stderr, "Disabling autoconnect\n");
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_SET_AUTOCONNECT_SETTINGS);
@@ -159,8 +179,6 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
         case WDS_IND_REQ:
             //Failed sends are not that interesting. It will just take longer
             //before the indications will be set up (timeout)
-            //TODO: Add reset too (applies for NAS and DMS as well). Handle
-            //update_autoconnect better (i.e., handle it)
             qmi_wds_send_update_autoconnect(qmid, 0);
             qmi_wds_send_set_event_report(qmid);
             break;
@@ -169,11 +187,13 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
             //should only be called from within wds state machine (and only when
             //disconnected is actually set)
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-                QMID_DEBUG_PRINT(stdout, "Done configuring WDS, will attempt connection\n");
+                QMID_DEBUG_PRINT(stderr, "Done configuring WDS, will attempt connection\n");
 
             qmi_wds_update_connect(qmid);
             break;
         case WDS_IDLE:
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+                QMID_DEBUG_PRINT(stderr, "Nothing to send for WDS\n");
             break;
     }
 
@@ -216,7 +236,7 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Received an EVENT_REPORT_RESP/IND\n");
+        QMID_DEBUG_PRINT(stderr, "Received an EVENT_REPORT_RESP/IND\n");
 
     //WDS is configured and ready to connect
     //EventReport is both used as the indication AND the reply for the intial
@@ -258,21 +278,21 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1){
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_WCDMA)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to WCDMA\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to WCDMA\n");
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_GPRS)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to GPRS\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to GPRS\n");
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_HSDPA)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to HSDPA\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to HSDPA\n");
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_HSUPA)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to HSUPA\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to HSUPA\n");
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_EDGE)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to EDGE\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to EDGE\n");
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_LTE)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to LTE\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to LTE\n");
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_HSDPA_PLUS)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to HSDPA+\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to HSDPA+\n");
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_DC_HSDPA_PLUS)
-            QMID_DEBUG_PRINT(stdout, "Data bearer is changed to DC_HSDPA+\n");
+            QMID_DEBUG_PRINT(stderr, "Data bearer is changed to DC_HSDPA+\n");
     }
 
     return retval;
@@ -351,7 +371,6 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
             retval = qmi_wds_handle_connect(qmid);
             break;
         case QMI_WDS_GET_PKT_SRVC_STATUS:
-
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)

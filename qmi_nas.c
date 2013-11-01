@@ -32,7 +32,7 @@ static uint8_t qmi_nas_send_reset(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Resetting NAS\n");
+        QMID_DEBUG_PRINT(stderr, "Resetting NAS\n");
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_RESET);
@@ -54,7 +54,7 @@ static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     qmid->nas_state = NAS_IND_REQ;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Configuring NAS indications\n");
+        QMID_DEBUG_PRINT(stderr, "Configuring NAS indications\n");
 
     return qmi_nas_write(qmid, buf, qmux_hdr->length);;
 }
@@ -64,7 +64,7 @@ static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-        QMID_DEBUG_PRINT(stdout, "Requesting initial SYS_INFO\n");
+        QMID_DEBUG_PRINT(stderr, "Requesting initial SYS_INFO\n");
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_GET_SYS_INFO);
@@ -75,16 +75,19 @@ static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
 static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
-    //uint16_t mode_pref = QMI_NAS_RAT_MODE_PREF_LTE;
+    //uint16_t mode_pref = 0xFFFF;
     //TODO: Add mode as a paramter, otherwise set to 0xFFFF
-    uint16_t mode_pref = 0xFFFF;
+    uint16_t mode_pref = htole16(QMI_NAS_RAT_MODE_PREF_LTE |
+            QMI_NAS_RAT_MODE_PREF_UMTS);
+    uint8_t duration = 0; //Do not make change permanent
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
-        QMID_DEBUG_PRINT(stdout, "Setting system selection preference to %x\n", mode_pref);
+        QMID_DEBUG_PRINT(stderr, "Setting system selection preference to %x\n", mode_pref);
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
     add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &mode_pref);
+    add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
 
     qmid->nas_state = NAS_SET_SYSTEM;
 
@@ -112,6 +115,8 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             qmi_nas_req_sys_info(qmid);
             break;
         case NAS_IDLE:
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+                QMID_DEBUG_PRINT(stderr, "Nothing to send for NAS\n");
             break;
     }
 
@@ -155,7 +160,7 @@ static uint8_t qmi_nas_handle_system_selection(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
     } else {
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
-            QMID_DEBUG_PRINT(stdout, "Successfully set system selection preference\n");
+            QMID_DEBUG_PRINT(stderr, "Successfully set system selection preference\n");
         qmid->nas_state = NAS_IND_REQ;
         qmi_nas_send(qmid);
         return QMI_MSG_SUCCESS;
@@ -177,7 +182,7 @@ static uint8_t qmi_nas_handle_ind_req_reply(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
     } else {
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
-            QMID_DEBUG_PRINT(stdout, "Sucessfully set NAS indications\n");
+            QMID_DEBUG_PRINT(stderr, "Sucessfully set NAS indications\n");
 
         qmid->nas_state = NAS_SYS_INFO_QUERY;
         //I don't care about the return value. If something fails, a timeout
@@ -249,10 +254,10 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1 && cur_service
             != qmid->cur_service)
         if(cur_service)
-            QMID_DEBUG_PRINT(stdout, "Modem is connected to technology %u\n",
+            QMID_DEBUG_PRINT(stderr, "Modem is connected to technology %u\n",
                     cur_service);
         else
-            QMID_DEBUG_PRINT(stdout, "Modem has no service\n");
+            QMID_DEBUG_PRINT(stderr, "Modem has no service\n");
 
     //update_connect takes care of the logic related to cur_service
     qmid->cur_service = cur_service;

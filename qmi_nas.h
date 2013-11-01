@@ -24,6 +24,7 @@
 
 //System selection TLV
 #define QMI_NAS_TLV_SS_MODE                     0x11
+#define QMI_NAS_TLV_SS_DURATION                 0x17
 
 //System selection mode preference values
 #define QMI_NAS_RAT_MODE_PREF_GSM               0x4
