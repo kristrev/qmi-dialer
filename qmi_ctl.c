@@ -167,7 +167,7 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
         return QMI_MSG_IGNORE;
     }
 
-    if(result == QMI_RESULT_FAILURE){
+    if(le16toh(result) == QMI_RESULT_FAILURE){
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Sync operation failed\n");
         return QMI_MSG_FAILURE;

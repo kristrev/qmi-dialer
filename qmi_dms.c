@@ -25,7 +25,8 @@ static inline ssize_t qmi_dms_write(struct qmi_device *qmid, uint8_t *buf,
     qmid->dms_sent_time = time(NULL);
 
     //+1 is to include marker
-    return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
+    //len is passed as qmux_hdr->length, which is store as little endian
+    return qmi_helpers_write(qmid->qmi_fd, buf, le16toh(len) + 1);
 }
 
 static ssize_t qmi_dms_send_reset(struct qmi_device *qmid){

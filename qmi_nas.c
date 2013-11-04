@@ -10,7 +10,7 @@
 #include "qmi_helpers.h"
 
 static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
-        ssize_t len){
+        uint16_t len){
     //TODO: Only do this if request is sucessful?
     qmid->nas_transaction_id = (qmid->nas_transaction_id + 1) % UINT8_MAX;
 
@@ -26,7 +26,8 @@ static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
     qmid->wds_sent_time = time(NULL);
 
     //+1 is to include marker
-    return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
+    //len is passed as qmux_hdr->length, which is store as little endian
+    return qmi_helpers_write(qmid->qmi_fd, buf, le16toh(len) + 1);
 }
 
 static ssize_t qmi_nas_send_reset(struct qmi_device *qmid){

@@ -14,7 +14,7 @@
 #include "qmi_nas.h"
 
 static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
-        ssize_t len){
+        uint16_t len){
     //TODO: Only do this if request is sucessful?
     qmid->wds_transaction_id = (qmid->wds_transaction_id + 1) % UINT8_MAX;
 
@@ -30,7 +30,8 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
     qmid->wds_sent_time = time(NULL);
 
     //+1 is to include marker
-    return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
+    //len is passed as qmux_hdr->length, which is store as little endian
+    return qmi_helpers_write(qmid->qmi_fd, buf, le16toh(len) + 1);
 }
 
 static ssize_t qmi_wds_connect(struct qmi_device *qmid){
@@ -353,12 +354,8 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
             qmi_wds_send_update_autoconnect(qmid, 0);
             qmid->wds_state = WDS_DISCONNECTED;
 
-            //TODO: Hack to make application keep trying to connect even if
-            //technology does not change
-            qmid->cur_service = NO_SERVICE;
-
-            //Next connection attempt will be decided by timeout or technology
-            //change
+            //Do not update service. The only method allowed to update service
+            //is SYS_INFO.
         } else if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Connection attempt failed, but "
                     "autoconnected\n");
@@ -447,11 +444,11 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
     //state machine also based on the packet service messages. Treat PSS_CONNECT
     //as CONNECTED and other statuses as disconnected.
     //
-    //This should work and will not race because a packet service message is
-    //always preceeded by a sys info message (at least it seems so). On modems
-    //that do not display the autoconnect-behavior, the connect will fail with
-    //the "NoEffect" and connection be established automatically. On modems with
-    //this cause, connect will work as intended.
+    //On the MF821D, the modem trusts autoconnect with the responsibility of
+    //restoring the connection. It does not work when PSS is lost (NoEffect and
+    //no connection), so I have to disabled autoconnect. This leads to
+    //non-optimal performance on modems that behave correctly, but I think this
+    //compromise is OK.
     if(conn_status == QMI_WDS_PSS_CONNECTED){
         qmid->wds_state = WDS_CONNECTED;
         //Request current data bearer (in case I have missed the initial
@@ -459,7 +456,9 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
         qmi_wds_request_data_bearer(qmid);
     } else{
         qmid->wds_state = WDS_DISCONNECTED;
-        qmid->cur_service = 0;
+        qmi_wds_send_update_autoconnect(qmid, 0);
+        //We have only lost packet serivce, not network service. So don't change
+        //service. Only handle_sys info is allowed to do that
     }
 
     return retval;

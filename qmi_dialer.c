@@ -192,7 +192,7 @@ static ssize_t read_data(struct qmi_device *qmid){
             qmid->qmux_progress = sizeof(qmux_hdr_t);
             //+1 is for the marker, which is also part of the data I want to
             //read
-            qmid->cur_qmux_length = qmux_hdr->length + 1;
+            qmid->cur_qmux_length = le16toh(qmux_hdr->length) + 1;
 
             //Add check for too large qmux length
         }
