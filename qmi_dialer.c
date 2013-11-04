@@ -16,6 +16,7 @@
 #include "qmi_ctl.h"
 #include "qmi_hdrs.h"
 #include "qmi_wds.h"
+#include "qmi_dms.h"
 
 //Define this variable globally (within scope of this file), so that I can
 //access it from the signal handler
@@ -82,7 +83,8 @@ static int32_t qmid_handle_timeout(struct qmi_device *qmid){
                 qmi_nas_send(qmid);
 
         if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC)
-            if(qmid->wds_state != WDS_IDLE)
+            //While connected, no need to query WDS
+            if(qmid->wds_state != WDS_CONNECTED)
                 qmi_wds_send(qmid);
 
         return 0;
@@ -143,6 +145,14 @@ static void handle_msg(struct qmi_device *qmid){
         case QMI_SERVICE_WDS:
             if(qmi_wds_handle_msg(qmid) == QMI_MSG_FAILURE){
                 QMID_DEBUG_PRINT(stderr, "Error in handling of WDS message, "
+                        "aborting\n");
+                qmi_cleanup();
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case QMI_SERVICE_DMS:
+            if(qmi_dms_handle_msg(qmid) == QMI_MSG_FAILURE){
+                QMID_DEBUG_PRINT(stderr, "Error in handling of DMS message, "
                         "aborting\n");
                 qmi_cleanup();
                 exit(EXIT_FAILURE);
@@ -267,12 +277,14 @@ static void qmid_run_eventloop(struct qmi_device *qmid){
 struct option qmi_options[] = {
     {"device",  required_argument, NULL, 'd'},
     {"apn",     required_argument, NULL, 'a'},
+    {"pin",     optional_argument, NULL, 'p'},
 };
 
 static void usage(){
     fprintf(stderr, "How to run: ./qmid <arguments>\n");
     fprintf(stderr, "\t--device/-d Path to qmi device (/dev/cdc-wdmX)\n");
     fprintf(stderr, "\t--apn/-a Apn to connect to\n");
+    fprintf(stderr, "\t--pin/-p PIN code (optional)\n");
     fprintf(stderr, "\t-v Verbosity level (up to vvvv)\n");
 }
 
@@ -293,7 +305,7 @@ int main(int argc, char *argv[]){
 
     //Parse arguments
     while(1){
-        c = getopt_long(argc, argv, "hvd:a:", qmi_options, NULL);
+        c = getopt_long(argc, argv, "hvd:a:p:", qmi_options, NULL);
 
         if(c == -1)
             break;
@@ -309,7 +321,15 @@ int main(int argc, char *argv[]){
                 if(qmid_verbose_logging + 1 < QMID_LOG_LEVEL_MAX)
                     qmid_verbose_logging++;
                 break;
+            case 'p':
+                if(strlen(optarg) > QMID_MAX_LENGTH_PIN){
+                    fprintf(stderr, "PIN code too long\n");
+                    exit(EXIT_FAILURE);
+                }
+                qmid.pin_code = optarg;
+                break;
             case 'h':
+            default:
                 usage();
                 exit(EXIT_SUCCESS);
         }

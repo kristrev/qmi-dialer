@@ -51,7 +51,8 @@ void add_tlv(uint8_t *buf, uint8_t type, uint16_t length, void *value){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     qmi_tlv_t *tlv;
 
-    assert(qmux_hdr->length + length + sizeof(qmi_tlv_t) < QMI_DEFAULT_BUF_SIZE);
+    assert(qmux_hdr->length + length + sizeof(qmi_tlv_t) <
+            QMI_DEFAULT_BUF_SIZE);
 
     //+1 is to compensate or the mark, which is now part of message
     tlv = (qmi_tlv_t*) (buf + qmux_hdr->length + 1);

@@ -29,7 +29,7 @@ static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }
 
-static uint8_t qmi_nas_send_reset(struct qmi_device *qmid){
+static ssize_t qmi_nas_send_reset(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
@@ -43,7 +43,7 @@ static uint8_t qmi_nas_send_reset(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
 
-static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
+static ssize_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     uint8_t enable = 1;
@@ -61,7 +61,7 @@ static uint8_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, qmux_hdr->length);;
 }
 
-static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
+static ssize_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
@@ -74,7 +74,7 @@ static uint8_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
 
-static uint8_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
+static ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     //uint16_t mode_pref = 0xFFFF;

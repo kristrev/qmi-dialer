@@ -33,7 +33,7 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
     return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }
 
-static uint8_t qmi_wds_connect(struct qmi_device *qmid){
+static ssize_t qmi_wds_connect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     uint8_t enable = 1;
@@ -96,7 +96,19 @@ uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
     //of re-establishing any dropped connections. So only call connect if state
     //is DISCONNECTED (WDS is moved in IDLE when the first connection is
     //sucessful)
-    if(qmid->cur_service && qmid->wds_state == WDS_DISCONNECTED)
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2){
+        if(!qmid->pin_unlocked)
+            QMID_DEBUG_PRINT(stderr, "Could not connect, PIN locked\n");
+        if(!qmid->cur_service)
+            QMID_DEBUG_PRINT(stderr, "Could not connect, no service\n");
+        if(qmid->wds_state != WDS_DISCONNECTED)
+            QMID_DEBUG_PRINT(stderr, "Could not connect, connection in "
+                    "progress\n");
+    }
+
+    if(qmid->pin_unlocked && qmid->cur_service && qmid->wds_state ==
+            WDS_DISCONNECTED)
         qmi_wds_connect(qmid);
     
     return 0;
@@ -205,7 +217,8 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
             //should only be called from within wds state machine (and only when
             //disconnected is actually set)
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-                QMID_DEBUG_PRINT(stderr, "Done configuring WDS, will attempt connection\n");
+                QMID_DEBUG_PRINT(stderr, "Done configuring WDS, will check if "
+                        "connection is possible\n");
 
             qmi_wds_update_connect(qmid);
             break;
@@ -363,8 +376,6 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     //Send autoconnect in case modem does not support 
     qmi_wds_send_update_autoconnect(qmid, 1);
 
-    qmid->wds_state = WDS_IDLE;
-
     return retval;
 }
 
@@ -482,7 +493,7 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
                 retval = qmi_wds_handle_connect(qmid);
             break;
         case QMI_WDS_GET_DATA_BEARER_TECHNOLOGY:
-            if(qmid->wds_state == WDS_IDLE)
+            if(qmid->wds_state == WDS_CONNECTED)
                 retval = qmi_wds_handle_get_db_tech(qmid);
             break;
         case QMI_WDS_GET_PKT_SRVC_STATUS:

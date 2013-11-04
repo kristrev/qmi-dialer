@@ -113,19 +113,16 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
             qmid->dms_id = cid;
             qmid->dms_state = DMS_GOT_CID;
             qmid->ctl_num_cids++;
-            //qmi_dms_send(qmid);
             break;
         case QMI_SERVICE_WDS:
             qmid->wds_id = cid;
             qmid->wds_state = WDS_GOT_CID;
             qmid->ctl_num_cids++;
-            //qmi_wds_send(qmid);
             break;
         case QMI_SERVICE_NAS:
             qmid->nas_id = cid;
             qmid->nas_state = NAS_GOT_CID;
             qmid->ctl_num_cids++;
-            //qmi_nas_send(qmid);
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
@@ -136,7 +133,13 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
 
     //Only start sending when I have received all CIDs
     if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
-        //qmi_dms_send(qmid);
+        //Only send DMS messages if I have a pin code to try
+        //TODO: Base DMS CID request also on if PIN code is set
+        if(qmid->pin_code)
+            qmi_dms_send(qmid);
+        else
+            qmid->pin_unlocked = 1;
+        
         qmi_wds_send(qmid);
         qmi_nas_send(qmid);
     }

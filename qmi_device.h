@@ -33,8 +33,8 @@ enum{
 //WDS state machine
 enum{
     WDS_INIT = 0,
-    WDS_RESET,
     WDS_GOT_CID,
+    WDS_RESET,
     WDS_IND_REQ,
     //Ready to start connection
     WDS_DISCONNECTED,
@@ -44,15 +44,15 @@ enum{
     //DISCONNECTED
     WDS_CONNECTED,
     WDS_DISCONNECTING,
-    //Since I use autoconnect, I only need to establish the first connection.
-    //Move into IDLE once that is done
-    WDS_IDLE
 };
 
 //DMS state machine
 enum{
     DMS_INIT = 0,
     DMS_GOT_CID,
+    DMS_RESET,
+    DMS_VERIFY_PIN,
+    DMS_IDLE
 };
 
 //The different values for the current service
@@ -73,6 +73,7 @@ typedef uint8_t cur_subservice_t;
 struct qmi_device{
     char *dev_path;
     char *apn_name;
+    char *pin_code;
 
     int32_t qmi_fd;
 
@@ -80,6 +81,8 @@ struct qmi_device{
     uint16_t qmux_progress;
     uint16_t cur_qmux_length;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+
+    uint8_t pin_unlocked;
 
     //Service is main service (GSM, UMTS, LTE)
     //Subservice is the type of connection, will only really matter for UMTS
@@ -94,8 +97,6 @@ struct qmi_device{
     uint8_t ctl_num_cids;
     uint8_t ctl_transaction_id;
     ctl_state_t ctl_state;
-
-    //Insert next byte here
 
     uint8_t nas_id;
     nas_state_t nas_state;

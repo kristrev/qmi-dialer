@@ -11,4 +11,5 @@ add_executable(qmid
     qmi_helpers.c
     qmi_nas.c
     qmi_wds.c
+    qmi_dms.c
 )

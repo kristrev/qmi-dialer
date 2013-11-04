@@ -7,6 +7,7 @@
 
 #define QMID_NUM_SERVICES       3
 #define QMID_TIMEOUT_SEC        5
+#define QMID_MAX_LENGTH_PIN     8
 
 //I/F type
 #define QMUX_IF_TYPE            0x01
@@ -14,8 +15,8 @@
 //Service types (that is currently used by qmid)
 #define QMI_SERVICE_CTL         0x00
 #define QMI_SERVICE_WDS         0x01
-#define QMI_SERVICE_DMS         0x02
 #define QMI_SERVICE_NAS         0x03
+#define QMI_SERVICE_DMS         0x02
 
 //Control flags
 #define QMI_CTL_FLAGS_RESP      0x3
