@@ -52,6 +52,8 @@ static ssize_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_INDICATION_REGISTER);
     add_tlv(buf, QMI_NAS_TLV_IND_SYS_INFO, sizeof(uint8_t), &enable);
+    //add_tlv(buf, QMI_NAS_TLV_IND_SIGNAL_STRENGTH, sizeof(uint8_t), &enable);
+
     //TODO: Could be that I do not need any more indications (except signal
     //strength). WDS gives me current technology
     qmid->nas_state = NAS_IND_REQ;
@@ -97,6 +99,19 @@ static ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
 
+static ssize_t qmi_nas_req_siginfo(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        QMID_DEBUG_PRINT(stderr, "Requesting signal info\n");
+
+    create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
+            qmid->nas_transaction_id, QMI_NAS_GET_SIG_INFO);
+
+    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+}
+
 //Send message based on state in state machine
 uint8_t qmi_nas_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
@@ -118,8 +133,10 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             qmi_nas_req_sys_info(qmid);
             break;
         case NAS_IDLE:
-            if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+            /*if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
                 QMID_DEBUG_PRINT(stderr, "Nothing to send for NAS\n");
+                */
+            qmi_nas_req_siginfo(qmid);
             break;
     }
 
@@ -268,6 +285,46 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
     return QMI_MSG_SUCCESS;
 }
 
+static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+    qmi_nas_service_info_t *qsi = NULL;
+    int8_t cur_signal = 0;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Received SIG_INFO_RESP\n");
+
+    if(result == QMI_RESULT_FAILURE)
+        return QMI_MSG_FAILURE;
+
+    //Remove first tlv
+    tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+
+    while(i<tlv_length){
+
+        if(tlv->type == QMI_NAS_TLV_SIG_INFO_WCDMA || tlv->type ==
+                QMI_NAS_TLV_SIG_INFO_LTE){
+            cur_signal = *((int8_t*) (tlv+1));
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "Signal strength %d\n", cur_signal);
+            break;
+        }
+
+        i += sizeof(qmi_tlv_t) + tlv->length;
+
+        if(i==tlv_length)
+            break;
+        else
+            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    }
+
+    return QMI_MSG_SUCCESS;
+}
+
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
@@ -302,6 +359,9 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
             //The result TLV is only included in my initial SYS_INFO request. If
             //something has failed with that request, consider it critical.
             retval = qmi_nas_handle_sys_info(qmid);
+            break;
+        case QMI_NAS_GET_SIG_INFO:
+            retval = qmi_nas_handle_sig_info(qmid);
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)

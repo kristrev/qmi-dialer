@@ -10,9 +10,11 @@
 #define QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE 0x0033
 #define QMI_NAS_GET_SYS_INFO                    0x004D
 #define QMI_NAS_SYS_INFO_IND                    0x004E
+#define QMI_NAS_GET_SIG_INFO                    0x004F
 
 //TLVs
 #define QMI_NAS_TLV_IND_SYS_INFO                0x18
+#define QMI_NAS_TLV_IND_SIGNAL_STRENGTH         0x19
 
 //Sys info TLV
 #define QMI_NAS_TLV_SI_GSM_SS                   0x12
@@ -30,6 +32,10 @@
 #define QMI_NAS_RAT_MODE_PREF_GSM               0x4
 #define QMI_NAS_RAT_MODE_PREF_UMTS              0x8
 #define QMI_NAS_RAT_MODE_PREF_LTE               0x10
+
+//SIGINFO TLVs
+#define QMI_NAS_TLV_SIG_INFO_WCDMA              0x13
+#define QMI_NAS_TLV_SIG_INFO_LTE                0x14
 
 //GSM/WCDMA/LTE/... uses the same structure for service info
 //TODO: CDMA is exception, but not able to test, so postpone implementation

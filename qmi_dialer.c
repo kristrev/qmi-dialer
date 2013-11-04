@@ -80,7 +80,9 @@ static int32_t qmid_handle_timeout(struct qmi_device *qmid){
         if(cur_time - qmid->nas_sent_time >= QMID_TIMEOUT_SEC)
             //If IDLE, no messages to send. Everything is indication based after
             //intial configuration
-            if(qmid->nas_state != NAS_IDLE)
+            //Temporarily disabled until I have set up signal strength
+            //indication
+            //if(qmid->nas_state != NAS_IDLE)
                 qmi_nas_send(qmid);
 
         if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC)
