@@ -81,8 +81,8 @@ struct qmi_device{
     uint16_t qmux_progress;
     uint16_t cur_qmux_length;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
-
     uint8_t pin_unlocked;
+    uint16_t rat_mode_pref;
 
     //Service is main service (GSM, UMTS, LTE)
     //Subservice is the type of connection, will only really matter for UMTS

@@ -17,6 +17,7 @@
 #include "qmi_hdrs.h"
 #include "qmi_wds.h"
 #include "qmi_dms.h"
+#include "qmi_nas.h"
 
 //Define this variable globally (within scope of this file), so that I can
 //access it from the signal handler
@@ -278,6 +279,7 @@ struct option qmi_options[] = {
     {"device",  required_argument, NULL, 'd'},
     {"apn",     required_argument, NULL, 'a'},
     {"pin",     optional_argument, NULL, 'p'},
+    {"lock",    optional_argument, NULL, 'l'},
 };
 
 static void usage(){
@@ -285,6 +287,7 @@ static void usage(){
     fprintf(stderr, "\t--device/-d Path to qmi device (/dev/cdc-wdmX)\n");
     fprintf(stderr, "\t--apn/-a Apn to connect to\n");
     fprintf(stderr, "\t--pin/-p PIN code (optional)\n");
+    fprintf(stderr, "\t--lock/-l Lock to UMTS (optional)\n");
     fprintf(stderr, "\t-v Verbosity level (up to vvvv)\n");
 }
 
@@ -303,9 +306,12 @@ int main(int argc, char *argv[]){
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
 
+    //Default is to prefer both LTE and UMTS
+    qmid.rat_mode_pref = QMI_NAS_RAT_MODE_PREF_LTE | QMI_NAS_RAT_MODE_PREF_UMTS;
+
     //Parse arguments
     while(1){
-        c = getopt_long(argc, argv, "hvd:a:p:", qmi_options, NULL);
+        c = getopt_long(argc, argv, "hvld:a:p:", qmi_options, NULL);
 
         if(c == -1)
             break;
@@ -320,6 +326,9 @@ int main(int argc, char *argv[]){
             case 'v':
                 if(qmid_verbose_logging + 1 < QMID_LOG_LEVEL_MAX)
                     qmid_verbose_logging++;
+                break;
+            case 'l':
+                qmid.rat_mode_pref = QMI_NAS_RAT_MODE_PREF_UMTS;
                 break;
             case 'p':
                 if(strlen(optarg) > QMID_MAX_LENGTH_PIN){

@@ -79,16 +79,16 @@ static ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     //uint16_t mode_pref = 0xFFFF;
     //TODO: Add mode as a paramter, otherwise set to 0xFFFF
-    uint16_t mode_pref = htole16(QMI_NAS_RAT_MODE_PREF_LTE |
-            QMI_NAS_RAT_MODE_PREF_UMTS);
     uint8_t duration = 0; //Do not make change permanent
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
-        QMID_DEBUG_PRINT(stderr, "Setting system selection preference to %x\n", mode_pref);
+        QMID_DEBUG_PRINT(stderr, "Setting system selection preference to %x\n",
+                qmid->rat_mode_pref);
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
-    add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &mode_pref);
+    add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t),
+            &(htole16(qmid->rat_mode_pref)));
     add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
 
     qmid->nas_state = NAS_SET_SYSTEM;
