@@ -419,6 +419,10 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
             QMID_DEBUG_PRINT(stderr, "Current data bearer is DC-HSDPA+/WCDMA\n");
         else if(data_bearer == QMI_WDS_DB_DC_HSDPA_HSUPA)
             QMID_DEBUG_PRINT(stderr, "Current data bearer is DC-HSDPA+/HSUPA\n");
+        else if(data_bearer == QMI_WDS_DB_HSDPA_PLUS_64)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA+ 64QAM\n");
+        else if(data_bearer == QMI_WDS_DB_HSDPA_PLUS_HSUPA_64)
+            QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA+/HSUPA 64QAM\n");
 
     return retval;
 }

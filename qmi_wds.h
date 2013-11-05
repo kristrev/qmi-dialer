@@ -53,6 +53,8 @@
 #define QMI_WDS_DB_HSDPA_WCDMA              0x07
 #define QMI_WDS_DB_WCDMA_HSUPA              0x08
 #define QMI_WDS_DB_HSDPA_HSUPA              0x09
+#define QMI_WDS_DB_HSDPA_PLUS_64            0x10
+#define QMI_WDS_DB_HSDPA_PLUS_HSUPA_64      0x11
 #define QMI_WDS_DB_LTE                      0x0A
 #define QMI_WDS_DB_HSDPA_PLUS_WCDMA         0x0C
 #define QMI_WDS_DB_HSDPA_PLUS_HSUPA         0x0D
