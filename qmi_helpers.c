@@ -3,10 +3,12 @@
 #include <string.h>
 #include <assert.h>
 #include <endian.h>
+#include <stdlib.h>
 
 #include "qmi_dialer.h"
 #include "qmi_hdrs.h"
 #include "qmi_shared.h"
+#include "qmi_device.h"
 
 void create_qmi_request(uint8_t *buf, uint8_t service, uint8_t client_id, 
         uint16_t transaction_id, uint16_t message_id){
@@ -138,4 +140,22 @@ void parse_qmi(uint8_t *buf){
 
 ssize_t qmi_helpers_write(int32_t qmi_fd, uint8_t *buf, ssize_t len){
     return write(qmi_fd, buf, len);
+}
+
+int qmi_helpers_set_link(char *ifname, uint8_t up){
+    char *ip_link_fmt = "ip link set dev";
+    //22 is strlen(ip link set dev X down\0"
+    char ip_link_cmd[22+IFNAMSIZ];
+    
+    if(up)
+        snprintf(ip_link_cmd, sizeof(ip_link_cmd), "%s %s up",
+                 ip_link_fmt, ifname);
+    else
+        snprintf(ip_link_cmd, sizeof(ip_link_cmd), "%s %s down",
+                 ip_link_fmt, ifname);
+
+    //if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+    //    fprintf(stderr, "Will run command %s\n", ip_link_cmd);
+
+    return system(ip_link_cmd);
 }

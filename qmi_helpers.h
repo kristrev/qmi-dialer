@@ -13,5 +13,5 @@ void create_qmi_request(uint8_t *buf, uint8_t service, uint8_t client_id,
 void add_tlv(uint8_t *buf, uint8_t type, uint16_t length, void *value);
 void parse_qmi(uint8_t *buf);
 ssize_t qmi_helpers_write(int32_t qmi_fd, uint8_t *buf, ssize_t len);
-
+int qmi_helpers_set_link(char *ifname, uint8_t up);
 #endif

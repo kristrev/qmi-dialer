@@ -53,6 +53,9 @@ static ssize_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_INDICATION_REGISTER);
     add_tlv(buf, QMI_NAS_TLV_IND_SYS_INFO, sizeof(uint8_t), &enable);
+
+    //Currently not supported
+    //add_tlv(buf, QMI_NAS_TLV_IND_RF_BAND, sizeof(uint8_t), &enable);
     //add_tlv(buf, QMI_NAS_TLV_IND_SIGNAL_STRENGTH, sizeof(uint8_t), &enable);
 
     //TODO: Could be that I do not need any more indications (except signal
@@ -100,13 +103,14 @@ ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
     add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
 
-    order_pref.acq_order_len = 2;
+/*    order_pref.acq_order_len = 2;
     order_pref.acq_order[0] = QMI_NAS_RADIO_IF_UMTS;
     order_pref.acq_order[1] = QMI_NAS_RADIO_IF_LTE;
     add_tlv(buf, QMI_NAS_TLV_SS_ORDER, sizeof(qmi_nas_acq_order_pref_t),
-            &order_pref);
+            &order_pref);*/
 
-    qmid->nas_state = NAS_SET_SYSTEM;
+    if(qmid->nas_state == NAS_RESET)
+        qmid->nas_state = NAS_SET_SYSTEM;
 
     return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
@@ -120,6 +124,19 @@ static ssize_t qmi_nas_req_siginfo(struct qmi_device *qmid){
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_GET_SIG_INFO);
+
+    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+}
+
+static ssize_t qmi_nas_req_rf_band(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        QMID_DEBUG_PRINT(stderr, "Requesting RF band info\n");
+
+    create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
+            qmid->nas_transaction_id, QMI_NAS_GET_RF_BAND_INFO);
 
     return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
@@ -149,6 +166,7 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
                 QMID_DEBUG_PRINT(stderr, "Nothing to send for NAS\n");
                 */
             qmi_nas_req_siginfo(qmid);
+            qmi_nas_req_rf_band(qmid);
             break;
     }
 
@@ -193,8 +211,11 @@ static uint8_t qmi_nas_handle_system_selection(struct qmi_device *qmid){
     } else {
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Successfully set system selection preference\n");
-        qmid->nas_state = NAS_IND_REQ;
-        qmi_nas_send(qmid);
+
+        if(qmid->nas_state == NAS_SET_SYSTEM){
+            qmid->nas_state = NAS_IND_REQ;
+            qmi_nas_send(qmid);
+        }
         return QMI_MSG_SUCCESS;
     }
 }
@@ -382,6 +403,38 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
     return QMI_MSG_SUCCESS;
 }
 
+static uint8_t qmi_nas_handle_rf_band_info(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
+    uint8_t retval = QMI_MSG_IGNORE;
+    uint8_t num_instances = 0;
+    qmi_nas_rf_band_info_t *rf_info = NULL;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Received RF_BAND_INFO_RECV_RESP\n");
+
+    if(result == QMI_RESULT_FAILURE){
+        return retval;
+    } 
+
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    num_instances = *((uint8_t*) (tlv+1));
+
+    //TODO: Add support if number of bands is > 1
+    if(num_instances > 1)
+        return retval;
+
+    rf_info = (qmi_nas_rf_band_info_t*) (((uint8_t*) (tlv+1)) + 1);
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        QMID_DEBUG_PRINT(stderr, "Technology %x Band %u\n", rf_info->radio_if,
+                le16toh(rf_info->active_band));
+
+    return retval;
+}
+
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
@@ -419,6 +472,9 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
             break;
         case QMI_NAS_GET_SIG_INFO:
             retval = qmi_nas_handle_sig_info(qmid);
+            break;
+        case QMI_NAS_GET_RF_BAND_INFO:
+            retval = qmi_nas_handle_rf_band_info(qmid);
             break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)

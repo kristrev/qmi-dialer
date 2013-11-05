@@ -353,7 +353,9 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         if(qmid->wds_state != WDS_CONNECTED){
             qmi_wds_send_update_autoconnect(qmid, 0);
             qmid->wds_state = WDS_DISCONNECTED;
-
+            //Switch back to UMTS, just in case I get one of the very
+            //short-lived connections
+            qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_UMTS);
             //Do not update service. The only method allowed to update service
             //is SYS_INFO.
         } else if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
@@ -462,12 +464,18 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
         //Request current data bearer (in case I have missed the initial
         //indication)
         qmi_wds_request_data_bearer(qmid);
+        qmi_helpers_set_link(qmid->ifname, 1);
     } else{
         qmid->wds_state = WDS_DISCONNECTED;
         qmi_wds_send_update_autoconnect(qmid, 0);
         //I only want to reconnect to UMTS
         qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_UMTS);
 
+        //Set network interface as down. This will not fail in a normal usage
+        //scenario, network interface depends on qmi-device. So it is only
+        //removed if qmi device is removed too
+        //TODO: Check for typos in ifname
+        qmi_helpers_set_link(qmid->ifname, 0);
         //We have only lost packet serivce, not network service. So don't change
         //service. Only handle_sys info is allowed to do that
     }

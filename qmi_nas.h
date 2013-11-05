@@ -7,14 +7,17 @@
 #define QMI_NAS_RESET                           0x0000
 #define QMI_NAS_INDICATION_REGISTER             0x0003
 #define QMI_NAS_GET_SERVING_SYSTEM              0x0024
+#define QMI_NAS_GET_RF_BAND_INFO                0x0031
 #define QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE 0x0033
 #define QMI_NAS_GET_SYS_INFO                    0x004D
 #define QMI_NAS_SYS_INFO_IND                    0x004E
 #define QMI_NAS_GET_SIG_INFO                    0x004F
+#define QMI_NAS_RF_BAND_INFO_IND                0x0066
 
 //TLVs
 #define QMI_NAS_TLV_IND_SYS_INFO                0x18
 #define QMI_NAS_TLV_IND_SIGNAL_STRENGTH         0x19
+#define QMI_NAS_TLV_IND_RF_BAND                 0x20
 
 //Sys info TLV
 #define QMI_NAS_TLV_SI_GSM_SS                   0x12
@@ -74,10 +77,17 @@ struct qmi_nas_acq_order_pref{
     uint8_t acq_order[2];
 } __attribute__((packed));
 
+struct qmi_nas_rf_band_info{
+    uint8_t radio_if;
+    uint16_t active_band;
+    uint16_t active_channel;
+} __attribute__((packed));
+
 typedef struct qmi_nas_service_info qmi_nas_service_info_t;
 typedef struct qmi_nas_wcdma_signal_info qmi_nas_wcdma_signal_info_t;
 typedef struct qmi_nas_lte_signal_info qmi_nas_lte_signal_info_t;
 typedef struct qmi_nas_acq_order_pref qmi_nas_acq_order_pref_t;
+typedef struct qmi_nas_rf_band_info qmi_nas_rf_band_info_t;
 
 struct qmi_device;
 

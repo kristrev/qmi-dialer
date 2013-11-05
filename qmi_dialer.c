@@ -283,12 +283,14 @@ struct option qmi_options[] = {
     {"apn",     required_argument, NULL, 'a'},
     {"pin",     optional_argument, NULL, 'p'},
     {"lock",    optional_argument, NULL, 'l'},
+    {"interface",  required_argument, NULL, 'i'},
 };
 
 static void usage(){
     fprintf(stderr, "How to run: ./qmid <arguments>\n");
     fprintf(stderr, "\t--device/-d Path to qmi device (/dev/cdc-wdmX)\n");
     fprintf(stderr, "\t--apn/-a Apn to connect to\n");
+    fprintf(stderr, "\t--interface/-i Network interface belonging to device\n");
     fprintf(stderr, "\t--pin/-p PIN code (optional)\n");
     fprintf(stderr, "\t--lock/-l Lock to UMTS (optional)\n");
     fprintf(stderr, "\t-v Verbosity level (up to vvvv)\n");
@@ -314,7 +316,7 @@ int main(int argc, char *argv[]){
 
     //Parse arguments
     while(1){
-        c = getopt_long(argc, argv, "hvld:a:p:", qmi_options, NULL);
+        c = getopt_long(argc, argv, "hvld:a:p:i:", qmi_options, NULL);
 
         if(c == -1)
             break;
@@ -340,6 +342,14 @@ int main(int argc, char *argv[]){
                 }
                 qmid.pin_code = optarg;
                 break;
+            case 'i':
+                if(strlen(optarg) > IFNAMSIZ){
+                    fprintf(stderr, "Too long interface name\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                memcpy(qmid.ifname, optarg, strlen(optarg));
+                break;
             case 'h':
             default:
                 usage();
@@ -347,7 +357,7 @@ int main(int argc, char *argv[]){
         }
     }
 
-    if(qmid.dev_path == NULL || qmid.apn_name == NULL){
+    if(qmid.dev_path == NULL || qmid.apn_name == NULL || !strlen(qmid.ifname)){
         fprintf(stderr, "Missing required argument\n");
         usage();
         exit(EXIT_FAILURE);
@@ -361,6 +371,7 @@ int main(int argc, char *argv[]){
         return EXIT_FAILURE;
     }
 
+    qmi_helpers_set_link(qmid.ifname, 0);
     qmid_run_eventloop(&qmid);
 
     //Only gets here if device fails to read from interface

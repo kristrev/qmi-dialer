@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <time.h>
+#include <net/if.h>
 
 #include "qmi_shared.h"
 
@@ -74,6 +75,7 @@ struct qmi_device{
     char *dev_path;
     char *apn_name;
     char *pin_code;
+    char ifname[IFNAMSIZ];
 
     int32_t qmi_fd;
 
