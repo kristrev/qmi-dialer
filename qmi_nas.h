@@ -27,6 +27,7 @@
 //System selection TLV
 #define QMI_NAS_TLV_SS_MODE                     0x11
 #define QMI_NAS_TLV_SS_DURATION                 0x17
+#define QMI_NAS_TLV_SS_ORDER                    0x1E
 
 //System selection mode preference values
 #define QMI_NAS_RAT_MODE_PREF_GSM               0x4
@@ -37,6 +38,17 @@
 #define QMI_NAS_TLV_SIG_INFO_WCDMA              0x13
 #define QMI_NAS_TLV_SIG_INFO_LTE                0x14
 
+//Android constants for number of signal strength bars
+#define SIGNAL_STRENGTH_NONE_OR_UNKNOWN         0
+#define SIGNAL_STRENGTH_POOR                    1
+#define SIGNAL_STRENGTH_MODERATE                2
+#define SIGNAL_STRENGTH_GOOD                    3
+#define SIGNAL_STRENGTH_GREAT                   4
+
+//Why is there so many definitions of the same variable???
+#define QMI_NAS_RADIO_IF_UMTS                   0x05
+#define QMI_NAS_RADIO_IF_LTE                    0x08
+
 //GSM/WCDMA/LTE/... uses the same structure for service info
 //TODO: CDMA is exception, but not able to test, so postpone implementation
 struct qmi_nas_service_info{
@@ -45,9 +57,33 @@ struct qmi_nas_service_info{
     uint8_t is_pre_data_path;
 } __attribute__((packed));
 
+struct qmi_nas_wcdma_signal_info{
+    int8_t rssi;
+    int16_t ecio;
+} __attribute__((packed));
+
+struct qmi_nas_lte_signal_info{
+    int8_t rssi;
+    int8_t rsrq;
+    int16_t rsrp;
+    int16_t snr;
+} __attribute__((packed));
+
+struct qmi_nas_acq_order_pref{
+    uint8_t acq_order_len;
+    uint8_t acq_order[2];
+} __attribute__((packed));
+
 typedef struct qmi_nas_service_info qmi_nas_service_info_t;
+typedef struct qmi_nas_wcdma_signal_info qmi_nas_wcdma_signal_info_t;
+typedef struct qmi_nas_lte_signal_info qmi_nas_lte_signal_info_t;
+typedef struct qmi_nas_acq_order_pref qmi_nas_acq_order_pref_t;
 
 struct qmi_device;
+
+//Also called from WDS, to set LTE after connect
+ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
+        uint16_t rat_mode_pref);
 
 //Handle a ctl message. Returns false if something went wrong
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid);

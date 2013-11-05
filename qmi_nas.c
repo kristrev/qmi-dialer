@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <endian.h>
+#include <string.h>
 
 #include "qmi_nas.h"
 #include "qmi_device.h"
@@ -77,22 +78,33 @@ static ssize_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
 
-static ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
+ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
+        uint16_t rat_mode_pref){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     //uint16_t mode_pref = 0xFFFF;
     //TODO: Add mode as a paramter, otherwise set to 0xFFFF
     uint8_t duration = 0; //Do not make change permanent
+    qmi_nas_acq_order_pref_t order_pref;
+
+    memset(&order_pref, 0, sizeof(order_pref));
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Setting system selection preference to %x\n",
-                qmid->rat_mode_pref);
+                rat_mode_pref);
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
-    add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t),
-            &(htole16(qmid->rat_mode_pref)));
+
+    rat_mode_pref = htole16(rat_mode_pref);
+    add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
+
+    order_pref.acq_order_len = 2;
+    order_pref.acq_order[0] = QMI_NAS_RADIO_IF_UMTS;
+    order_pref.acq_order[1] = QMI_NAS_RADIO_IF_LTE;
+    add_tlv(buf, QMI_NAS_TLV_SS_ORDER, sizeof(qmi_nas_acq_order_pref_t),
+            &order_pref);
 
     qmid->nas_state = NAS_SET_SYSTEM;
 
@@ -123,7 +135,7 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             break;
         case NAS_SET_SYSTEM:
             //TODO: Add check for if(mode != 0) here and allow for fallthrough
-            qmi_nas_set_sys_selection(qmid);
+            qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_UMTS);
             break;
         case NAS_IND_REQ:
             //Failed sends can be dealt with later
@@ -257,8 +269,9 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
 
                 qsi = (qmi_nas_service_info_t*) (tlv+1);
                
-                if(qsi->srv_status != QMI_NAS_TLV_SI_SRV_STATUS_SRV)
-                         cur_service = NO_SERVICE;
+                if(qsi->srv_status < QMI_NAS_TLV_SI_SRV_STATUS_SRV)
+                    cur_service = NO_SERVICE;
+
                 break;
         }
 
@@ -291,8 +304,10 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
     uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
-    qmi_nas_service_info_t *qsi = NULL;
-    int8_t cur_signal = 0;
+    qmi_nas_wcdma_signal_info_t *wcdma_sig = NULL;
+    qmi_nas_lte_signal_info_t *lte_sig = NULL;
+    int8_t cur_signal_dbm = 0;
+    int8_t cur_bars = 0;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Received SIG_INFO_RESP\n");
@@ -306,14 +321,56 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
 
     while(i<tlv_length){
 
-        if(tlv->type == QMI_NAS_TLV_SIG_INFO_WCDMA || tlv->type ==
-                QMI_NAS_TLV_SIG_INFO_LTE){
-            cur_signal = *((int8_t*) (tlv+1));
-            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
-                QMID_DEBUG_PRINT(stderr, "Signal strength %d\n", cur_signal);
-            break;
-        }
+        if(tlv->type == QMI_NAS_TLV_SIG_INFO_WCDMA){
+            wcdma_sig = (qmi_nas_wcdma_signal_info_t*) (tlv+1);
+            //According to Wikipedia, ASU for UMTS should be calculated using
+            //the RSCP value. I dont have access to this one, so use RSSI (which
+            //should be the forward link pilot channel). Check this
+            //Mapping from
+            //http://note19.com/2010/07/04/
+            //mapping-cellular-signal-strength-to-5-bars/
 
+            cur_signal_dbm = wcdma_sig->rssi;
+
+            if(cur_signal_dbm >= -73)
+                cur_bars = SIGNAL_STRENGTH_GREAT;
+            else if(cur_signal_dbm >= -85)
+                cur_bars = SIGNAL_STRENGTH_GOOD;
+            else if(cur_signal_dbm >= -98)
+                cur_bars = SIGNAL_STRENGTH_MODERATE;
+            else if(cur_signal_dbm >= -110)
+                cur_bars = SIGNAL_STRENGTH_POOR;
+            else
+                cur_bars = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
+
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "WCDMA. RSSI %d dBm ECIO %d "
+                        "# bars %d\n", wcdma_sig->rssi, wcdma_sig->ecio,
+                        cur_bars);
+            break;
+        } else if(tlv->type == QMI_NAS_TLV_SIG_INFO_LTE){
+            lte_sig = (qmi_nas_lte_signal_info_t*) (tlv+1);
+            cur_signal_dbm = lte_sig->rsrp;
+
+            if(cur_signal_dbm == -1)
+                cur_bars = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
+            else if(cur_signal_dbm >= -85)
+                cur_bars = SIGNAL_STRENGTH_GREAT;
+            else if(cur_signal_dbm >= -95)
+                cur_bars = SIGNAL_STRENGTH_GOOD;
+            else if(cur_signal_dbm >= -105)
+                cur_bars = SIGNAL_STRENGTH_MODERATE;
+            else if(cur_signal_dbm >= -115)
+                cur_bars = SIGNAL_STRENGTH_POOR;
+
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "LTE. RSSI %d dBm RSRQ %d dB RSRP %d "
+                        "SNR %d # bars %d\n", lte_sig->rssi, lte_sig->rsrq,
+                        lte_sig->rsrp, lte_sig->snr/10, cur_bars);
+
+            break;
+        } 
+        
         i += sizeof(qmi_tlv_t) + tlv->length;
 
         if(i==tlv_length)

@@ -164,6 +164,7 @@ static void handle_msg(struct qmi_device *qmid){
         default:
             QMID_DEBUG_PRINT(stderr, "Message for non-supported service (%x)\n",
                     qmux_hdr->service_type);
+            parse_qmi(qmid->buf);
             break;
     }
 }
