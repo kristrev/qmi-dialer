@@ -82,9 +82,11 @@ struct qmi_device{
     //Buffer has to be persistent accross calls to recv
     uint16_t qmux_progress;
     uint16_t cur_qmux_length;
+    uint16_t rat_mode_pref;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     uint8_t pin_unlocked;
-    uint16_t rat_mode_pref;
+    uint8_t netcom_mode;
+    uint8_t umts_locked;
 
     //Service is main service (GSM, UMTS, LTE)
     //Subservice is the type of connection, will only really matter for UMTS

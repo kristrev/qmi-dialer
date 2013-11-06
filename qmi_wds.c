@@ -10,6 +10,7 @@
 #include "qmi_dialer.h"
 #include "qmi_hdrs.h"
 #include "qmi_helpers.h"
+#include "qmi_nas.h"
 
 static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
         uint16_t len){
@@ -35,11 +36,13 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
 static ssize_t qmi_wds_connect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+    //Convert to little endian
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(qmid->apn_name),
             qmid->apn_name);
+    //add_tlv(buf, QMI_WDS_TLV_SNI_EXT_TECH_PREF, sizeof(int16_t), &etp_val); 
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Will connect to APN %s\n", qmid->apn_name);
@@ -334,6 +337,11 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
             QMID_DEBUG_PRINT(stderr, "Connection attempt failed\n");
 
         if(qmid->wds_state != WDS_CONNECTED)
+            //No need to update rat_mode_pref in case of Netcom mode. Rat mode
+            //is only set to allow LTE after a successful connected. A
+            //connection failed attempt is either the initial connection
+            //(rat_pref has not been set) or preceded by a packet service
+            //disconnect (rat_pref has been set to RAT_MODE_PREF_MIN)
             qmid->wds_state = WDS_DISCONNECTED;
         else if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Connection attempt failed, but "
@@ -344,6 +352,13 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     qmid->pkt_data_handle = le32toh(*((uint32_t*) (tlv + 1)));
     qmid->wds_state = WDS_CONNECTED;
+
+    //Update the system selection preferences if in Netcom mode (allow
+    //UE to connect to LTE) and not locked to UMTS/GSM
+    if(qmid->netcom_mode && !qmid->umts_locked){
+        qmid->rat_mode_pref = QMI_NAS_RAT_MODE_PREF_ALL;
+        qmi_nas_set_sys_selection(qmid);
+    }
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Modem is connected. Handle %x\n",
@@ -417,15 +432,25 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
         QMID_DEBUG_PRINT(stderr, "pkt srvc status: %x reconn: %x\n",
                 conn_status, reconn_required);
 
-        if(conn_status == QMI_WDS_PSS_CONNECTED){
+    if(conn_status == QMI_WDS_PSS_CONNECTED){
         qmid->wds_state = WDS_CONNECTED;
         //Request current data bearer (in case I have missed the initial
         //indication)
         qmi_wds_request_data_bearer(qmid);
         qmi_helpers_set_link(qmid->ifname, 1);
+
+        //No need to update rat_mode_pref here, done when the connection is
+        //established (in case of Netcom mode)
     } else{
         qmid->wds_state = WDS_DISCONNECTED;
 
+        //Only allow devices to reconnect to UMTS/GSM networks if Netcom mode is
+        //enabled
+        if(qmid->netcom_mode && !qmid->umts_locked){
+            qmid->rat_mode_pref = QMI_NAS_RAT_MODE_PREF_MIN;
+            qmi_nas_set_sys_selection(qmid);
+        }
+ 
         //Set network interface as down. This will not fail in a normal usage
         //scenario, network interface depends on qmi-device. So it is only
         //removed if qmi device is removed too

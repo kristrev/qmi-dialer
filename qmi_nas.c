@@ -82,7 +82,7 @@ static ssize_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
-static ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
+ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     //TODO: Add mode as a paramter, otherwise set to 0xFFFF
@@ -100,9 +100,6 @@ static ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
 
-    if(qmid->nas_state == NAS_RESET)
-        qmid->nas_state = NAS_SET_SYSTEM;
-
     return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
@@ -110,7 +107,7 @@ static ssize_t qmi_nas_req_siginfo(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
-    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Requesting signal info\n");
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
@@ -123,7 +120,7 @@ static ssize_t qmi_nas_req_rf_band(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
-    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Requesting RF band info\n");
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,

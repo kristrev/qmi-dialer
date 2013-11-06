@@ -38,6 +38,7 @@
 #define QMI_NAS_RAT_MODE_PREF_UMTS              0x8
 #define QMI_NAS_RAT_MODE_PREF_LTE               0x10
 #define QMI_NAS_RAT_MODE_PREF_MIN               (QMI_NAS_RAT_MODE_PREF_GSM | QMI_NAS_RAT_MODE_PREF_UMTS)
+#define QMI_NAS_RAT_MODE_PREF_ALL               (QMI_NAS_RAT_MODE_PREF_MIN | QMI_NAS_RAT_MODE_PREF_LTE)
 
 //SIGINFO TLVs
 #define QMI_NAS_TLV_SIG_INFO_WCDMA              0x13
@@ -51,6 +52,7 @@
 #define SIGNAL_STRENGTH_GREAT                   4
 
 //Why is there so many definitions of the same variable???
+#define QMI_NAS_RADIO_IF_GSM                    0x04
 #define QMI_NAS_RADIO_IF_UMTS                   0x05
 #define QMI_NAS_RADIO_IF_LTE                    0x08
 
@@ -84,6 +86,7 @@ typedef struct qmi_nas_service_info qmi_nas_service_info_t;
 typedef struct qmi_nas_wcdma_signal_info qmi_nas_wcdma_signal_info_t;
 typedef struct qmi_nas_lte_signal_info qmi_nas_lte_signal_info_t;
 typedef struct qmi_nas_rf_band_info qmi_nas_rf_band_info_t;
+typedef struct qmi_nas_si_order qmi_nas_si_acq_order_t;
 
 struct qmi_device;
 
@@ -92,4 +95,7 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid);
 
 //Send message based on state in state machine
 uint8_t qmi_nas_send(struct qmi_device *qmid);
+
+//Update the current system selection
+ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid);
 #endif
