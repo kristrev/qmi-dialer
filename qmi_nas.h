@@ -87,10 +87,6 @@ typedef struct qmi_nas_rf_band_info qmi_nas_rf_band_info_t;
 
 struct qmi_device;
 
-//Also called from WDS, to set LTE after connect
-ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
-        uint16_t rat_mode_pref);
-
 //Handle a ctl message. Returns false if something went wrong
 uint8_t qmi_nas_handle_msg(struct qmi_device *qmid);
 

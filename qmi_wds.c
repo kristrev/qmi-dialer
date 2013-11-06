@@ -47,7 +47,7 @@ static ssize_t qmi_wds_connect(struct qmi_device *qmid){
     //This is so far the only critical write I have. However, I will not do
     //anything right now, the next connect will be controlled by a timeout
     if(qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length)) ==
-            qmux_hdr->length + 1){
+            le16toh(qmux_hdr->length) + 1){
         qmid->wds_state = WDS_CONNECTING;
         return QMI_MSG_SUCCESS;
     } else

@@ -82,21 +82,21 @@ static ssize_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
-ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
-        uint16_t rat_mode_pref){
+static ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
     //TODO: Add mode as a paramter, otherwise set to 0xFFFF
     uint8_t duration = 0; //Do not make change permanent
+    uint16_t rat_mode_pref = 0;
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Setting system selection preference to %x\n",
-                rat_mode_pref);
+                qmid->rat_mode_pref);
 
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
 
-    rat_mode_pref = htole16(rat_mode_pref);
+    rat_mode_pref = htole16(qmid->rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
 
@@ -156,7 +156,7 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             break;
         case NAS_SET_SYSTEM:
             //TODO: Add check for if(mode != 0) here and allow for fallthrough
-            qmi_nas_set_sys_selection(qmid, qmid->rat_mode_pref);
+            qmi_nas_set_sys_selection(qmid);
             break;
         case NAS_IND_REQ:
             //Failed sends can be dealt with later
@@ -172,8 +172,9 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             if(qmid->cur_service){
                 qmi_nas_req_siginfo(qmid);
                 qmi_nas_req_rf_band(qmid);
-            } else
+            } else{
                 qmi_nas_get_serving_system(qmid);
+            }
             break;
     }
 
@@ -276,7 +277,7 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
         tlv_length = tlv_length - sizeof(qmi_tlv_t) - le16toh(tlv->length);
         tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     }
-
+    
     qmid->nas_state = NAS_IDLE;
 
     //The goal right now is just to check if one is attached (srv_status !=
@@ -379,7 +380,7 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
             break;
         } else if(tlv->type == QMI_NAS_TLV_SIG_INFO_LTE){
             lte_sig = (qmi_nas_lte_signal_info_t*) (tlv+1);
-            cur_signal_dbm = lte_sig->rsrp;
+            cur_signal_dbm = le16toh(lte_sig->rsrp);
 
             if(cur_signal_dbm == -1)
                 cur_bars = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
@@ -395,7 +396,7 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
                 QMID_DEBUG_PRINT(stderr, "LTE. RSSI %d dBm RSRQ %d dB RSRP %d "
                         "SNR %d # bars %d\n", lte_sig->rssi, lte_sig->rsrq,
-                        le16toh(lte_sig->rsrp), le16toh(lte_sig->snr/10),
+                        lte_sig->rsrp, lte_sig->snr/10,
                         cur_bars);
 
             break;
