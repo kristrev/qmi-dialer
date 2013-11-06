@@ -194,7 +194,6 @@ static ssize_t read_data(struct qmi_device *qmid){
             qmid->cur_qmux_length = le16toh(qmux_hdr->length) + 1;
 
             //Add check for too large qmux length
-            printf("Read a complete header. Length %u\n", qmid->cur_qmux_length);
         }
     } 
 
@@ -206,7 +205,6 @@ static ssize_t read_data(struct qmi_device *qmid){
         qmid->qmux_progress += numbytes;
 
         if(qmid->qmux_progress == qmid->cur_qmux_length){
-            printf("Progress %u Length %u\n", qmid->qmux_progress, qmid->cur_qmux_length);
             handle_msg(qmid);
             qmid->qmux_progress = 0;
             qmid->cur_qmux_length = 0;

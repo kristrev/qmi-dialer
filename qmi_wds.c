@@ -29,7 +29,7 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
 
     //+1 is to include marker
     //len is passed as qmux_hdr->length, which is store as little endian
-    return qmi_helpers_write(qmid->qmi_fd, buf, le16toh(len) + 1);
+    return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }
 
 static ssize_t qmi_wds_connect(struct qmi_device *qmid){
@@ -46,7 +46,8 @@ static ssize_t qmi_wds_connect(struct qmi_device *qmid){
 
     //This is so far the only critical write I have. However, I will not do
     //anything right now, the next connect will be controlled by a timeout
-    if(qmi_wds_write(qmid, buf, qmux_hdr->length) == qmux_hdr->length + 1){
+    if(qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length)) ==
+            qmux_hdr->length + 1){
         qmid->wds_state = WDS_CONNECTING;
         return QMI_MSG_SUCCESS;
     } else
@@ -71,7 +72,7 @@ uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
 
     //TODO: There can't be any partial writes, the file descriptor is in
     //blocking mode
-    if(qmi_wds_write(qmid, buf, qmux_hdr->length)){
+    if(qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length))){
         //TODO: Should perhaps be disconnecting, look into it
         qmid->wds_state = WDS_DISCONNECTED;
         return QMI_MSG_SUCCESS;
@@ -112,7 +113,7 @@ static ssize_t qmi_wds_send_reset(struct qmi_device *qmid){
             qmid->wds_transaction_id, QMI_WDS_RESET);
     qmid->wds_state = WDS_RESET;
 
-    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+    return qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
@@ -128,7 +129,7 @@ static ssize_t qmi_wds_send_set_event_report(struct qmi_device *qmid){
     add_tlv(buf, QMI_WDS_TLV_ER_CUR_DATA_BEARER_IND, sizeof(uint8_t), &enable);
     qmid->wds_state = WDS_IND_REQ;
 
-    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+    return qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 //Keep this function for now, even though it is not used. With the MF821D, I see
@@ -150,7 +151,7 @@ static ssize_t qmi_wds_send_get_pkt_srvc(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_GET_PKT_SRVC_STATUS);
 
-    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+    return qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
@@ -169,7 +170,7 @@ static ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
             qmid->wds_transaction_id, QMI_WDS_SET_AUTOCONNECT_SETTINGS);
     add_tlv(buf, QMI_WDS_TLV_SAS_SETTING, sizeof(uint8_t), &enabled);
 
-    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+    return qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_wds_request_data_bearer(struct qmi_device *qmid){
@@ -182,7 +183,7 @@ static ssize_t qmi_wds_request_data_bearer(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_GET_DATA_BEARER_TECHNOLOGY);
 
-    return qmi_wds_write(qmid, buf, qmux_hdr->length);
+    return qmi_wds_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 
@@ -269,8 +270,8 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
     
     //Remove first tlv if this message was the result of a request
     if(qmi_hdr->transaction_id){
-        tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
-        tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+        tlv_length = tlv_length - sizeof(qmi_tlv_t) - le16toh(tlv->length);
+        tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     }
 
     while(i<tlv_length){
@@ -280,12 +281,12 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
             break;
         }
 
-        i += sizeof(qmi_tlv_t) + tlv->length;
+        i += sizeof(qmi_tlv_t) + le16toh(tlv->length);
 
         if(i==tlv_length)
             break;
         else
-            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     }
 
     //The reason I cant check for for example i == tlv_length here, is that
@@ -340,7 +341,7 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         return retval;
     }
 
-    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     qmid->pkt_data_handle = le32toh(*((uint32_t*) (tlv + 1)));
     qmid->wds_state = WDS_CONNECTED;
 
@@ -367,7 +368,7 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
         return retval;
     }
 
-    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     data_bearer = *((uint8_t*) (tlv+1));
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1){

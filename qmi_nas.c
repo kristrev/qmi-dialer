@@ -29,7 +29,7 @@ static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
 
     //+1 is to include marker
     //len is passed as qmux_hdr->length, which is store as little endian
-    return qmi_helpers_write(qmid->qmi_fd, buf, le16toh(len) + 1);
+    return qmi_helpers_write(qmid->qmi_fd, buf, len + 1);
 }
 
 static ssize_t qmi_nas_send_reset(struct qmi_device *qmid){
@@ -43,7 +43,7 @@ static ssize_t qmi_nas_send_reset(struct qmi_device *qmid){
             qmid->nas_transaction_id, QMI_NAS_RESET);
     qmid->nas_state = NAS_RESET;
 
-    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_nas_send_indication_request(struct qmi_device *qmid){
@@ -66,7 +66,7 @@ static ssize_t qmi_nas_send_indication_request(struct qmi_device *qmid){
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Configuring NAS indications\n");
 
-    return qmi_nas_write(qmid, buf, qmux_hdr->length);;
+    return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_nas_req_sys_info(struct qmi_device *qmid){
@@ -79,7 +79,7 @@ static ssize_t qmi_nas_req_sys_info(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_GET_SYS_INFO);
 
-    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
@@ -103,7 +103,7 @@ ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
     if(qmid->nas_state == NAS_RESET)
         qmid->nas_state = NAS_SET_SYSTEM;
 
-    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_nas_req_siginfo(struct qmi_device *qmid){
@@ -116,7 +116,7 @@ static ssize_t qmi_nas_req_siginfo(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_GET_SIG_INFO);
 
-    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_nas_req_rf_band(struct qmi_device *qmid){
@@ -129,7 +129,7 @@ static ssize_t qmi_nas_req_rf_band(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_GET_RF_BAND_INFO);
 
-    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 static ssize_t qmi_nas_get_serving_system(struct qmi_device *qmid){
@@ -142,7 +142,7 @@ static ssize_t qmi_nas_get_serving_system(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_GET_SERVING_SYSTEM);
 
-    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+    return qmi_nas_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 //Send message based on state in state machine
@@ -273,8 +273,8 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
             return QMI_MSG_FAILURE;
 
         //Remove first tlv
-        tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
-        tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+        tlv_length = tlv_length - sizeof(qmi_tlv_t) - le16toh(tlv->length);
+        tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     }
 
     qmid->nas_state = NAS_IDLE;
@@ -303,12 +303,12 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
                 break;
         }
 
-        i += sizeof(qmi_tlv_t) + tlv->length;
+        i += sizeof(qmi_tlv_t) + le16toh(tlv->length);
 
         if(i==tlv_length)
             break;
         else
-            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     }
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1 && cur_service
@@ -345,8 +345,8 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
         return QMI_MSG_FAILURE;
 
     //Remove first tlv
-    tlv_length = tlv_length - sizeof(qmi_tlv_t) - tlv->length;
-    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    tlv_length = tlv_length - sizeof(qmi_tlv_t) - le16toh(tlv->length);
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
 
     while(i<tlv_length){
 
@@ -374,8 +374,8 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
 
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
                 QMID_DEBUG_PRINT(stderr, "WCDMA. RSSI %d dBm ECIO %d "
-                        "# bars %d\n", wcdma_sig->rssi, wcdma_sig->ecio,
-                        cur_bars);
+                        "# bars %d\n", wcdma_sig->rssi,
+                        le16toh(wcdma_sig->ecio), cur_bars);
             break;
         } else if(tlv->type == QMI_NAS_TLV_SIG_INFO_LTE){
             lte_sig = (qmi_nas_lte_signal_info_t*) (tlv+1);
@@ -395,17 +395,18 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
                 QMID_DEBUG_PRINT(stderr, "LTE. RSSI %d dBm RSRQ %d dB RSRP %d "
                         "SNR %d # bars %d\n", lte_sig->rssi, lte_sig->rsrq,
-                        lte_sig->rsrp, lte_sig->snr/10, cur_bars);
+                        le16toh(lte_sig->rsrp), le16toh(lte_sig->snr/10),
+                        cur_bars);
 
             break;
         } 
         
-        i += sizeof(qmi_tlv_t) + tlv->length;
+        i += sizeof(qmi_tlv_t) + le16toh(tlv->length);
 
         if(i==tlv_length)
             break;
         else
-            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+            tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     }
 
     return QMI_MSG_SUCCESS;
@@ -427,7 +428,7 @@ static uint8_t qmi_nas_handle_rf_band_info(struct qmi_device *qmid){
         return retval;
     } 
 
-    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     num_instances = *((uint8_t*) (tlv+1));
 
     //TODO: Add support if number of bands is > 1
@@ -487,7 +488,7 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
                 QMID_DEBUG_PRINT(stderr, "Unknown NAS packet of type %x\n",
-                        qmi_hdr->message_id);
+                        le16toh(qmi_hdr->message_id));
             break;
     }
 

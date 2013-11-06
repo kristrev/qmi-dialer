@@ -57,7 +57,7 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     else
         add_tlv(buf, QMI_CTL_TLV_ALLOC_INFO, sizeof(uint8_t), &service);
 
-    retval = qmi_ctl_write(qmid, buf, qmux_hdr->length);
+    retval = qmi_ctl_write(qmid, buf, le16toh(qmux_hdr->length));
 
     if(retval <= 0)
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
@@ -77,7 +77,7 @@ ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             QMI_CTL_SYNC);
 
-    return qmi_ctl_write(qmid, buf, qmux_hdr->length);
+    return qmi_ctl_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
 //Return false is something went wrong (typically no available CID)
@@ -103,7 +103,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     }
 
     //Get the CID
-    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
+    tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     service = *((uint8_t*) (tlv+1));
     cid = *(((uint8_t*) (tlv+1)) + 1);
 
@@ -221,7 +221,7 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
                 QMID_DEBUG_PRINT(stderr, "Unknown CTL message of type %x\n",
-                        qmi_hdr->message_id);
+                        le16toh(qmi_hdr->message_id));
             retval = QMI_MSG_IGNORE;
             break;
     }
