@@ -36,6 +36,7 @@
 #define QMI_NAS_RAT_MODE_PREF_GSM               0x4
 #define QMI_NAS_RAT_MODE_PREF_UMTS              0x8
 #define QMI_NAS_RAT_MODE_PREF_LTE               0x10
+#define QMI_NAS_RAT_MODE_PREF_MIN               (QMI_NAS_RAT_MODE_PREF_GSM | QMI_NAS_RAT_MODE_PREF_UMTS)
 
 //SIGINFO TLVs
 #define QMI_NAS_TLV_SIG_INFO_WCDMA              0x13
@@ -72,11 +73,6 @@ struct qmi_nas_lte_signal_info{
     int16_t snr;
 } __attribute__((packed));
 
-struct qmi_nas_acq_order_pref{
-    uint8_t acq_order_len;
-    uint8_t acq_order[2];
-} __attribute__((packed));
-
 struct qmi_nas_rf_band_info{
     uint8_t radio_if;
     uint16_t active_band;
@@ -86,7 +82,6 @@ struct qmi_nas_rf_band_info{
 typedef struct qmi_nas_service_info qmi_nas_service_info_t;
 typedef struct qmi_nas_wcdma_signal_info qmi_nas_wcdma_signal_info_t;
 typedef struct qmi_nas_lte_signal_info qmi_nas_lte_signal_info_t;
-typedef struct qmi_nas_acq_order_pref qmi_nas_acq_order_pref_t;
 typedef struct qmi_nas_rf_band_info qmi_nas_rf_band_info_t;
 
 struct qmi_device;

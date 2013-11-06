@@ -6,9 +6,13 @@
 
 #define QMI_DMS_RESET                       0x0000
 #define QMI_DMS_VERIFY_PIN                  0x0028
+#define QMI_DMS_SET_OPERATING_MODE          0x002E
 
 //Verify PIN TLV
 #define QMI_DMS_TLV_VP_VERIFY_PIN           0x01
+
+//Set operating mode TLV
+#define QMI_DMS_TLV_OPERATING_MODE          0x01
 
 //This is a generic error code, but only used here. Modem returns NoEffect when
 //there is no PIN code

@@ -85,12 +85,8 @@ ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
         uint16_t rat_mode_pref){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
-    //uint16_t mode_pref = 0xFFFF;
     //TODO: Add mode as a paramter, otherwise set to 0xFFFF
     uint8_t duration = 0; //Do not make change permanent
-    qmi_nas_acq_order_pref_t order_pref;
-
-    memset(&order_pref, 0, sizeof(order_pref));
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Setting system selection preference to %x\n",
@@ -102,12 +98,6 @@ ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid,
     rat_mode_pref = htole16(rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
-
-/*    order_pref.acq_order_len = 2;
-    order_pref.acq_order[0] = QMI_NAS_RADIO_IF_UMTS;
-    order_pref.acq_order[1] = QMI_NAS_RADIO_IF_LTE;
-    add_tlv(buf, QMI_NAS_TLV_SS_ORDER, sizeof(qmi_nas_acq_order_pref_t),
-            &order_pref);*/
 
     if(qmid->nas_state == NAS_RESET)
         qmid->nas_state = NAS_SET_SYSTEM;
@@ -141,6 +131,19 @@ static ssize_t qmi_nas_req_rf_band(struct qmi_device *qmid){
     return qmi_nas_write(qmid, buf, qmux_hdr->length);
 }
 
+static ssize_t qmi_nas_get_serving_system(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        QMID_DEBUG_PRINT(stderr, "Requesting RF band info\n");
+
+    create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
+            qmid->nas_transaction_id, QMI_NAS_GET_SERVING_SYSTEM);
+
+    return qmi_nas_write(qmid, buf, qmux_hdr->length);
+}
+
 //Send message based on state in state machine
 uint8_t qmi_nas_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
@@ -152,7 +155,7 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             break;
         case NAS_SET_SYSTEM:
             //TODO: Add check for if(mode != 0) here and allow for fallthrough
-            qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_UMTS);
+            qmi_nas_set_sys_selection(qmid, qmid->rat_mode_pref);
             break;
         case NAS_IND_REQ:
             //Failed sends can be dealt with later
@@ -165,8 +168,11 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             /*if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
                 QMID_DEBUG_PRINT(stderr, "Nothing to send for NAS\n");
                 */
-            qmi_nas_req_siginfo(qmid);
-            qmi_nas_req_rf_band(qmid);
+            if(qmid->cur_service){
+                qmi_nas_req_siginfo(qmid);
+                qmi_nas_req_rf_band(qmid);
+            } else
+                qmi_nas_get_serving_system(qmid);
             break;
     }
 

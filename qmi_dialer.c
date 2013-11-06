@@ -25,9 +25,10 @@ static struct qmi_device qmid;
 
 static void qmi_cleanup(){
     uint8_t enable = 0;
+    
     //Disable autoconnect (in case other applications will use modem)
     qmi_wds_send_update_autoconnect(&qmid, enable);
-    
+
     //Disconnect connection (if any)
     //Beware that some modems, for example MF821D, seems to return NoEffect here
     if(qmid.pkt_data_handle){
@@ -78,12 +79,8 @@ static int32_t qmid_handle_timeout(struct qmi_device *qmid){
 
     if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
         if(cur_time - qmid->nas_sent_time >= QMID_TIMEOUT_SEC)
-            //If IDLE, no messages to send. Everything is indication based after
-            //intial configuration
-            //Temporarily disabled until I have set up signal strength
-            //indication
-            //if(qmid->nas_state != NAS_IDLE)
-                qmi_nas_send(qmid);
+            //TODO: Use indications for signal strength and band
+            qmi_nas_send(qmid);
 
         if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC)
             //While connected, no need to query WDS
@@ -312,7 +309,8 @@ int main(int argc, char *argv[]){
     sigaction(SIGINT, &sa, NULL);
 
     //Default is to prefer both LTE and UMTS
-    qmid.rat_mode_pref = QMI_NAS_RAT_MODE_PREF_LTE | QMI_NAS_RAT_MODE_PREF_UMTS;
+    qmid.rat_mode_pref = QMI_NAS_RAT_MODE_PREF_LTE |
+        QMI_NAS_RAT_MODE_PREF_MIN;
 
     //Parse arguments
     while(1){
@@ -333,7 +331,7 @@ int main(int argc, char *argv[]){
                     qmid_verbose_logging++;
                 break;
             case 'l':
-                qmid.rat_mode_pref = QMI_NAS_RAT_MODE_PREF_UMTS;
+                qmid.rat_mode_pref = QMI_NAS_RAT_MODE_PREF_MIN;
                 break;
             case 'p':
                 if(strlen(optarg) > QMID_MAX_LENGTH_PIN){

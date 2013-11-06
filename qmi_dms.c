@@ -71,6 +71,21 @@ static ssize_t qmi_dms_verify_pin(struct qmi_device *qmid){
     return qmi_dms_write(qmid, buf, qmux_hdr->length);
 }
 
+static ssize_t qmi_dms_set_oper_mode(struct qmi_device *qmid,
+        uint8_t oper_mode){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Setting operating mode to %u\n", oper_mode);
+
+    create_qmi_request(buf, QMI_SERVICE_DMS, qmid->dms_id,
+            qmid->dms_transaction_id, QMI_DMS_SET_OPERATING_MODE);
+    add_tlv(buf, QMI_DMS_TLV_OPERATING_MODE, sizeof(uint8_t), &oper_mode);
+
+    return qmi_dms_write(qmid, buf, qmux_hdr->length);
+}
+
 uint8_t qmi_dms_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
 

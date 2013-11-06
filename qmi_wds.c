@@ -355,7 +355,7 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
             qmid->wds_state = WDS_DISCONNECTED;
             //Switch back to UMTS, just in case I get one of the very
             //short-lived connections
-            qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_UMTS);
+            //qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_MIN);
             //Do not update service. The only method allowed to update service
             //is SYS_INFO.
         } else if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
@@ -376,8 +376,8 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     qmi_wds_send_update_autoconnect(qmid, 1);
 
     //Set system selection to include LTE (if needed)
-    if(qmid->rat_mode_pref != QMI_NAS_RAT_MODE_PREF_UMTS)
-        qmi_nas_set_sys_selection(qmid, qmid->rat_mode_pref);
+    //if(qmid->rat_mode_pref != QMI_NAS_RAT_MODE_PREF_UMTS)
+    //    qmi_nas_set_sys_selection(qmid, qmid->rat_mode_pref);
 
     return retval;
 }
@@ -469,7 +469,7 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
         qmid->wds_state = WDS_DISCONNECTED;
         qmi_wds_send_update_autoconnect(qmid, 0);
         //I only want to reconnect to UMTS
-        qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_UMTS);
+        //qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_MIN);
 
         //Set network interface as down. This will not fail in a normal usage
         //scenario, network interface depends on qmi-device. So it is only
