@@ -9,6 +9,7 @@
 #include "qmi_hdrs.h"
 #include "qmi_dialer.h"
 #include "qmi_helpers.h"
+#include "qmi_wds.h"
 
 static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
         uint16_t len){
@@ -311,12 +312,13 @@ static uint8_t qmi_nas_handle_sys_info(struct qmi_device *qmid){
     }
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1 && cur_service
-            != qmid->cur_service)
+            != qmid->cur_service){
         if(cur_service)
             QMID_DEBUG_PRINT(stderr, "Modem is connected to technology %u\n",
                     cur_service);
         else
             QMID_DEBUG_PRINT(stderr, "Modem has no service\n");
+    }
 
     //update_connect takes care of the logic related to cur_service
     qmid->cur_service = cur_service;

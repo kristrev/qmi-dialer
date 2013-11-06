@@ -18,6 +18,7 @@
 #include "qmi_wds.h"
 #include "qmi_dms.h"
 #include "qmi_nas.h"
+#include "qmi_helpers.h"
 
 //Define this variable globally (within scope of this file), so that I can
 //access it from the signal handler
@@ -291,7 +292,6 @@ static void usage(){
 
 int main(int argc, char *argv[]){
     //Should also be global, so I can access it in signal handler
-    ssize_t numbytes = 0;
     struct sigaction sa;
     int c = 0;
 

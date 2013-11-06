@@ -11,6 +11,7 @@
 #include "qmi_device.h"
 #include "qmi_nas.h"
 #include "qmi_wds.h"
+#include "qmi_dms.h"
 
 static inline ssize_t qmi_ctl_write(struct qmi_device *qmid, uint8_t *buf,
         ssize_t len){
@@ -42,13 +43,14 @@ ssize_t qmi_ctl_update_cid(struct qmi_device *qmid, uint8_t service,
     create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
             message_id);
 
-    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2){
         if(release)
             QMID_DEBUG_PRINT(stderr, "Releasing CID %x for service %x\n",
                     cid, service);
         else
             QMID_DEBUG_PRINT(stderr, "Requesting CID for service %x\n",
                     service);
+    }
 
     if(release)
         add_tlv(buf, QMI_CTL_TLV_ALLOC_INFO, sizeof(uint16_t), &tlv_value);

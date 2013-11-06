@@ -9,9 +9,7 @@
 #include "qmi_shared.h"
 #include "qmi_dialer.h"
 #include "qmi_hdrs.h"
-
-//TEMP
-#include "qmi_nas.h"
+#include "qmi_helpers.h"
 
 static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
         uint16_t len){
@@ -37,7 +35,6 @@ static inline ssize_t qmi_wds_write(struct qmi_device *qmid, uint8_t *buf,
 static ssize_t qmi_wds_connect(struct qmi_device *qmid){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
-    uint8_t enable = 1;
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
@@ -84,23 +81,17 @@ uint8_t qmi_wds_disconnect(struct qmi_device *qmid){
 
 //TODO: Fix return values here
 uint8_t qmi_wds_update_connect(struct qmi_device *qmid){
-    //Establish a new connection if I have service and a connection is not
-    //already established, or in progress
-    uint8_t retval = 0;
-
-    //After the first successful connection attempt, AUTOCONNECT will take care
-    //of re-establishing any dropped connections. So only call connect if state
-    //is DISCONNECTED (WDS is moved in IDLE when the first connection is
-    //sucessful)
-
+    
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2){
         if(!qmid->pin_unlocked)
             QMID_DEBUG_PRINT(stderr, "Could not connect, PIN locked\n");
         if(!qmid->cur_service)
             QMID_DEBUG_PRINT(stderr, "Could not connect, no service\n");
-        if(qmid->wds_state != WDS_DISCONNECTED)
+        if(qmid->wds_state == WDS_CONNECTING)
             QMID_DEBUG_PRINT(stderr, "Could not connect, connection in "
                     "progress\n");
+        else if(qmid->wds_state == WDS_CONNECTED)
+            QMID_DEBUG_PRINT(stderr, "Already connected\n");
     }
 
     if(qmid->pin_unlocked && qmid->cur_service && qmid->wds_state ==
@@ -167,11 +158,12 @@ static ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
 
-    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2){
         if(enabled)
             QMID_DEBUG_PRINT(stderr, "Enabling autoconnect\n");
         else
             QMID_DEBUG_PRINT(stderr, "Disabling autoconnect\n");
+    }
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_SET_AUTOCONNECT_SETTINGS);
@@ -329,7 +321,6 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
-    uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
     uint8_t retval = QMI_MSG_IGNORE;
 
@@ -364,7 +355,6 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
-    uint16_t tlv_length = le16toh(qmi_hdr->length), i = 0;
     uint16_t result = le16toh(*((uint16_t*) (tlv+1)));
     uint8_t retval = QMI_MSG_IGNORE;
     uint8_t data_bearer = 0;
@@ -380,7 +370,7 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + tlv->length);
     data_bearer = *((uint8_t*) (tlv+1));
 
-    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_1){
         if(data_bearer == QMI_WDS_DB_GSM)
             QMID_DEBUG_PRINT(stderr, "Current data bearer is GSM\n");
         else if(data_bearer == QMI_WDS_DB_UMTS)
@@ -407,6 +397,7 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
             QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA+ 64QAM\n");
         else if(data_bearer == QMI_WDS_DB_HSDPA_PLUS_HSUPA_64)
             QMID_DEBUG_PRINT(stderr, "Current data bearer is HSDPA+/HSUPA 64QAM\n");
+    }
 
     return retval;
 }

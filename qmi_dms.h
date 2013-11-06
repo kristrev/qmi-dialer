@@ -29,5 +29,6 @@ typedef struct qmi_dms_verify_pin qmi_dms_verify_pin_t;
 struct qmi_device;
 
 uint8_t qmi_dms_send(struct qmi_device *qmid);
+uint8_t qmi_dms_handle_msg(struct qmi_device *qmid);
 
 #endif
