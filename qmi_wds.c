@@ -44,11 +44,6 @@ static ssize_t qmi_wds_connect(struct qmi_device *qmid){
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(qmid->apn_name),
             qmid->apn_name);
 
-    //Use autoconnect for this session. This TLV is deprecated, but seems to be
-    //needed by for example MF821D. For later QMI versions, including this does
-    //not matter as unrecognized TLVs shall be ignored (according to spec)
-    add_tlv(buf, QMI_WDS_TLV_SNI_AUTO_CONNECT, sizeof(uint8_t), &enable);
-
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Will connect to APN %s\n", qmid->apn_name);
 
@@ -167,7 +162,7 @@ static ssize_t qmi_wds_send_get_pkt_srvc(struct qmi_device *qmid){
     return qmi_wds_write(qmid, buf, qmux_hdr->length);
 }
 
-ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
+static ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
         uint8_t enabled){
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
@@ -210,6 +205,9 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
         case WDS_IND_REQ:
             //Failed sends are not that interesting. It will just take longer
             //before the indications will be set up (timeout)
+            //Disable autoconnect, otherwise the dialer will just become
+            //confused, connections will not be made and so on (MF821D has
+            //seemingly large problems with this value)
             qmi_wds_send_update_autoconnect(qmid, 0);
             qmi_wds_send_set_event_report(qmid);
             break;
@@ -343,22 +341,9 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Connection attempt failed\n");
 
-        //Disable autoconnect. This seems to be a required step for getting the
-        //MF821D to work properly with the second connection attempt (otherwise
-        //it just returns NO_EFFECT). For other modems this should not matter, I
-        //want to be in control of the first connection attempt. Auto connect is
-        //only for moving between HSDPA and LTE, for example
-        //The WDS connected check is in case autoconnect has kicked in and
-        //worked on some modem (testing the pkt_srvc theory)
-        if(qmid->wds_state != WDS_CONNECTED){
-            qmi_wds_send_update_autoconnect(qmid, 0);
+        if(qmid->wds_state != WDS_CONNECTED)
             qmid->wds_state = WDS_DISCONNECTED;
-            //Switch back to UMTS, just in case I get one of the very
-            //short-lived connections
-            //qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_MIN);
-            //Do not update service. The only method allowed to update service
-            //is SYS_INFO.
-        } else if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+        else if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Connection attempt failed, but "
                     "autoconnected\n");
         return retval;
@@ -371,13 +356,6 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Modem is connected. Handle %x\n",
                 qmid->pkt_data_handle);
-
-    //Send autoconnect in case modem does not support 
-    qmi_wds_send_update_autoconnect(qmid, 1);
-
-    //Set system selection to include LTE (if needed)
-    //if(qmid->rat_mode_pref != QMI_NAS_RAT_MODE_PREF_UMTS)
-    //    qmi_nas_set_sys_selection(qmid, qmid->rat_mode_pref);
 
     return retval;
 }
@@ -447,19 +425,7 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
         QMID_DEBUG_PRINT(stderr, "pkt srvc status: %x reconn: %x\n",
                 conn_status, reconn_required);
 
-    //Some modems, at least the MF821D, seems to behave a bit strange when
-    //service is lost. It seems as if loss of service is announced through 
-    //a SYS_INFO, autoconnect works fine. If it is announced through a packet
-    //service, autconnect does not work. What these checks do is to update the
-    //state machine also based on the packet service messages. Treat PSS_CONNECT
-    //as CONNECTED and other statuses as disconnected.
-    //
-    //On the MF821D, the modem trusts autoconnect with the responsibility of
-    //restoring the connection. It does not work when PSS is lost (NoEffect and
-    //no connection), so I have to disabled autoconnect. This leads to
-    //non-optimal performance on modems that behave correctly, but I think this
-    //compromise is OK.
-    if(conn_status == QMI_WDS_PSS_CONNECTED){
+        if(conn_status == QMI_WDS_PSS_CONNECTED){
         qmid->wds_state = WDS_CONNECTED;
         //Request current data bearer (in case I have missed the initial
         //indication)
@@ -467,9 +433,6 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
         qmi_helpers_set_link(qmid->ifname, 1);
     } else{
         qmid->wds_state = WDS_DISCONNECTED;
-        qmi_wds_send_update_autoconnect(qmid, 0);
-        //I only want to reconnect to UMTS
-        //qmi_nas_set_sys_selection(qmid, QMI_NAS_RAT_MODE_PREF_MIN);
 
         //Set network interface as down. This will not fail in a normal usage
         //scenario, network interface depends on qmi-device. So it is only

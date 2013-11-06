@@ -24,11 +24,6 @@
 static struct qmi_device qmid;
 
 static void qmi_cleanup(){
-    uint8_t enable = 0;
-    
-    //Disable autoconnect (in case other applications will use modem)
-    qmi_wds_send_update_autoconnect(&qmid, enable);
-
     //Disconnect connection (if any)
     //Beware that some modems, for example MF821D, seems to return NoEffect here
     if(qmid.pkt_data_handle){
@@ -82,10 +77,11 @@ static int32_t qmid_handle_timeout(struct qmi_device *qmid){
             //TODO: Use indications for signal strength and band
             qmi_nas_send(qmid);
 
-        if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC)
+        if(cur_time - qmid->wds_sent_time >= QMID_TIMEOUT_SEC){
             //While connected, no need to query WDS
             if(qmid->wds_state != WDS_CONNECTED)
                 qmi_wds_send(qmid);
+        }
 
         return 0;
     } else{

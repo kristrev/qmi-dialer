@@ -24,7 +24,7 @@ static inline ssize_t qmi_nas_write(struct qmi_device *qmid, uint8_t *buf,
         parse_qmi(buf);
     }
 
-    qmid->wds_sent_time = time(NULL);
+    qmid->nas_sent_time = time(NULL);
 
     //+1 is to include marker
     //len is passed as qmux_hdr->length, which is store as little endian

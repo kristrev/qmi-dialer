@@ -74,10 +74,6 @@ struct qmi_device;
 //Handle a WDS message. Returns false if something went wrong
 uint8_t qmi_wds_handle_msg(struct qmi_device *qmid);
 
-//Enable/disable autoconnect
-ssize_t qmi_wds_send_update_autoconnect(struct qmi_device *qmid,
-        uint8_t enabled);
-
 //Send message based on state in state machine
 uint8_t qmi_wds_send(struct qmi_device *qmid);
 
