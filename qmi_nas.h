@@ -2,6 +2,7 @@
 #define QMI_NAS_H
 
 #include <stdint.h>
+#include <sys/types.h>
 
 //NAS message types 
 #define QMI_NAS_RESET                           0x0000

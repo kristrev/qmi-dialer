@@ -45,7 +45,9 @@ static void qmi_cleanup(){
 
     //Make sure all the messages are sent before exiting application (and
     //closing file descriptor)
-    syncfs(qmid.qmi_fd);
+    //syncfs(qmid.qmi_fd);
+    //OpenWRT (uclibc?) does not have synfs
+    sync();
 }
 
 static void qmi_signal_handler(int signum){
