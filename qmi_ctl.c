@@ -149,7 +149,7 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     return QMI_MSG_SUCCESS;
 }
 
-static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid);
+//static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid);
 static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
@@ -182,7 +182,7 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
     }
 }
 
-static uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
+uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
     //TODO: Add to timeout
     if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
@@ -201,7 +201,7 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
     qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
     uint8_t retval;
 
-    switch(qmi_hdr->message_id){
+    switch(le16toh(qmi_hdr->message_id)){
         case QMI_CTL_GET_CID:
         case QMI_CTL_RELEASE_CID:
             //Do not set any values unless I am synced

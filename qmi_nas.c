@@ -448,7 +448,7 @@ uint8_t qmi_nas_handle_msg(struct qmi_device *qmid){
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     uint8_t retval = QMI_MSG_IGNORE;
 
-    switch(qmi_hdr->message_id){
+    switch(le16toh(qmi_hdr->message_id)){
         case QMI_NAS_RESET:
             //Guards to make sure I am in the right state when receiving a
             //message to prevent reordered messages confusing the state machine.

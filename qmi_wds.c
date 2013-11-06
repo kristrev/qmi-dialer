@@ -442,7 +442,7 @@ uint8_t qmi_wds_handle_msg(struct qmi_device *qmid){
     qmi_hdr_gen_t *qmi_hdr = (qmi_hdr_gen_t*) (qmux_hdr + 1);
     uint8_t retval = QMI_MSG_IGNORE;
 
-    switch(qmi_hdr->message_id){
+    switch(le16toh(qmi_hdr->message_id)){
         case QMI_WDS_RESET:
             if(qmid->wds_state == WDS_RESET)
                 retval = qmi_wds_handle_reset(qmid);
