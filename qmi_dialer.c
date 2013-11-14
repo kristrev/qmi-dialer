@@ -202,6 +202,14 @@ static ssize_t read_data(struct qmi_device *qmid){
     if(qmid->cur_qmux_length){
         numbytes = read(qmid->qmi_fd, qmid->buf + qmid->qmux_progress,
                 qmid->cur_qmux_length - qmid->qmux_progress);
+
+        if(numbytes == -1){
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "Read from device failed\n");
+
+            return numbytes;
+        }
+
         qmid->qmux_progress += numbytes;
 
         if(qmid->qmux_progress == qmid->cur_qmux_length){
