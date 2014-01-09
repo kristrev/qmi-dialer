@@ -153,8 +153,8 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             break;
         case NAS_SET_SYSTEM:
             //TODO: Add check for if(mode != 0) here and allow for fallthrough
-            qmi_nas_set_sys_selection(qmid);
-            break;
+            //qmi_nas_set_sys_selection(qmid);
+            //break;
         case NAS_IND_REQ:
             //Failed sends can be dealt with later
             qmi_nas_send_indication_request(qmid);
