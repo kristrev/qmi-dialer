@@ -147,6 +147,7 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
 
     switch(qmid->nas_state){
+        /*
         case NAS_GOT_CID:
         case NAS_RESET:
             qmi_nas_send_reset(qmid);
@@ -163,15 +164,17 @@ uint8_t qmi_nas_send(struct qmi_device *qmid){
             qmi_nas_req_sys_info(qmid);
             break;
         case NAS_IDLE:
-            /*if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
-                QMID_DEBUG_PRINT(stderr, "Nothing to send for NAS\n");
-                */
             if(qmid->cur_service){
                 qmi_nas_req_siginfo(qmid);
                 qmi_nas_req_rf_band(qmid);
             } else{
                 qmi_nas_get_serving_system(qmid);
             }
+            break;
+            */
+        default:
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "Will not send NAS message\n");
             break;
     }
 

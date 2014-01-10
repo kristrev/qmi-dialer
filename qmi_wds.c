@@ -3,6 +3,7 @@
 #include <endian.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "qmi_wds.h"
 #include "qmi_device.h"
@@ -192,8 +193,10 @@ static ssize_t qmi_wds_request_data_bearer(struct qmi_device *qmid){
 
 uint8_t qmi_wds_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
+    char buf[1];
 
     switch(qmid->wds_state){
+        /*
         case WDS_GOT_CID:
         case WDS_RESET:
             qmi_wds_send_reset(qmid);
@@ -216,6 +219,17 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
                         "connection is possible\n");
 
             qmi_wds_update_connect(qmid);
+            break;
+            */
+        default:
+            if(qmid->wds_state <= WDS_DISCONNECTED){
+                if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                    QMID_DEBUG_PRINT(stderr, "Will connect after keypress\n");
+
+                read(fileno(stdin), buf, 1);
+                qmi_wds_connect(qmid);
+            }
+
             break;
     }
 

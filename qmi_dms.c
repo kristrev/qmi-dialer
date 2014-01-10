@@ -90,14 +90,16 @@ uint8_t qmi_dms_send(struct qmi_device *qmid){
     uint8_t retval = QMI_MSG_IGNORE;
 
     switch(qmid->dms_state){
-        case DMS_GOT_CID:
+        /*case DMS_GOT_CID:
         case DMS_RESET:
             qmi_dms_send_reset(qmid);
             break;
         case DMS_VERIFY_PIN:
             qmi_dms_verify_pin(qmid);
-            break;
+            break;*/
         default:
+            if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+                QMID_DEBUG_PRINT(stderr, "Not sending DMS message\n");
             break;
     } 
     return retval;
