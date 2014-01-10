@@ -75,6 +75,9 @@ static int32_t qmid_handle_timeout(struct qmi_device *qmid){
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
         QMID_DEBUG_PRINT(stderr, "Checking for timeout events\n");
 
+    qmi_wds_send(qmid);
+    return 0;
+
     if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
         if(cur_time - qmid->nas_sent_time >= QMID_TIMEOUT_SEC)
             //TODO: Use indications for signal strength and band

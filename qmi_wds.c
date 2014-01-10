@@ -41,6 +41,7 @@ static ssize_t qmi_wds_connect(struct qmi_device *qmid){
 
     create_qmi_request(buf, QMI_SERVICE_WDS, qmid->wds_id,
             qmid->wds_transaction_id, QMI_WDS_START_NETWORK_INTERFACE);
+    printf("%s\n", qmid->apn_name);
     add_tlv(buf, QMI_WDS_TLV_SNI_APN_NAME, strlen(qmid->apn_name),
             qmid->apn_name);
     //add_tlv(buf, QMI_WDS_TLV_SNI_EXT_TECH_PREF, sizeof(int16_t), &etp_val); 

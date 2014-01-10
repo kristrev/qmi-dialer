@@ -134,7 +134,8 @@ static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     }
 
     //Only start sending when I have received all CIDs
-    if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
+    //if(qmid->ctl_num_cids == QMID_NUM_SERVICES){
+    if(qmid->ctl_num_cids == 1){
         //Only send DMS messages if I have a pin code to try
         //TODO: Base DMS CID request also on if PIN code is set
         if(qmid->pin_code)
@@ -184,14 +185,14 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
 
 uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
     //TODO: Add to timeout
-    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
-        return QMI_MSG_FAILURE;
+    //if(qmi_ctl_update_cid(qmid, QMI_SERVICE_NAS, false, 0) <= 0)
+    //    return QMI_MSG_FAILURE;
 
     if(qmi_ctl_update_cid(qmid, QMI_SERVICE_WDS, false, 0) <= 0)
         return QMI_MSG_FAILURE;
 
-    if(qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
-        return QMI_MSG_FAILURE;
+    //if(qmi_ctl_update_cid(qmid, QMI_SERVICE_DMS, false, 0) <= 0)
+    //    return QMI_MSG_FAILURE;
 
     return QMI_MSG_SUCCESS;
 }
