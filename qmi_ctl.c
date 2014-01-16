@@ -80,6 +80,25 @@ ssize_t qmi_ctl_send_sync(struct qmi_device *qmid){
     return qmi_ctl_write(qmid, buf, le16toh(qmux_hdr->length));
 }
 
+ssize_t qmi_ctl_send_data_format(struct qmi_device *qmid){
+    uint8_t buf[QMI_DEFAULT_BUF_SIZE];
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) buf;
+
+	//Values fetched from windows_telenor_qmi
+	uint8_t format = 0;
+	uint16_t proto = htole16(0x0001);
+
+    if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+        QMID_DEBUG_PRINT(stderr, "Seding set data format request\n");
+
+    create_qmi_request(buf, QMI_SERVICE_CTL, 0, qmid->ctl_transaction_id,
+            QMI_CTL_SET_DATA_FORMAT);
+	add_tlv(buf, QMI_CTL_TLV_DATA_FORMAT, sizeof(uint8_t), &format);
+	add_tlv(buf, QMI_CTL_TLV_DATA_PROTO, sizeof(uint16_t), &proto);
+
+    return qmi_ctl_write(qmid, buf, le16toh(qmux_hdr->length));
+}
+
 //Return false is something went wrong (typically no available CID)
 static uint8_t qmi_ctl_handle_cid_reply(struct qmi_device *qmid){
     qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
@@ -178,8 +197,30 @@ static uint8_t qmi_ctl_handle_sync_reply(struct qmi_device *qmid){
 
         //This can be viewed as the proper start of the dialer. After
         //getting the sync reply, request cid for each service I will use
-        return qmi_ctl_request_cid(qmid);
+        //return qmi_ctl_request_cid(qmid);
+		return qmi_ctl_send_data_format(qmid);
     }
+}
+
+static uint8_t qmi_ctl_handle_data_format(struct qmi_device *qmid){
+    qmux_hdr_t *qmux_hdr = (qmux_hdr_t*) qmid->buf;
+    qmi_hdr_ctl_t *qmi_hdr = (qmi_hdr_ctl_t*) (qmux_hdr + 1);
+    qmi_tlv_t *tlv = (qmi_tlv_t*) (qmi_hdr + 1);
+    uint16_t result = *((uint16_t*) (tlv+1));
+
+	if(le16toh(result) == QMI_RESULT_FAILURE){
+        if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
+            QMID_DEBUG_PRINT(stderr, "Sync operation failed\n");
+        return QMI_MSG_FAILURE;
+    }
+
+	tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
+	result = *((uint16_t*) (tlv+1));
+
+	if(qmid_verbose_logging >= QMID_LOG_LEVEL_2)
+		QMID_DEBUG_PRINT(stderr, "Data format set to %x\n", le16toh(result));
+
+	return qmi_ctl_request_cid(qmid);
 }
 
 uint8_t qmi_ctl_request_cid(struct qmi_device *qmid){
@@ -218,6 +259,9 @@ uint8_t qmi_ctl_handle_msg(struct qmi_device *qmid){
             //state
             retval = qmi_ctl_handle_sync_reply(qmid);
             break;
+		case QMI_CTL_SET_DATA_FORMAT:
+			retval = qmi_ctl_handle_data_format(qmid);
+			break;
         default:
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_3)
                 QMID_DEBUG_PRINT(stderr, "Unknown CTL message of type %x\n",

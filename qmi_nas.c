@@ -96,7 +96,8 @@ ssize_t qmi_nas_set_sys_selection(struct qmi_device *qmid){
     create_qmi_request(buf, QMI_SERVICE_NAS, qmid->nas_id,
             qmid->nas_transaction_id, QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE);
 
-    rat_mode_pref = htole16(qmid->rat_mode_pref);
+    //rat_mode_pref = htole16(qmid->rat_mode_pref);
+	rat_mode_pref = htole16(0x0004);
     add_tlv(buf, QMI_NAS_TLV_SS_MODE, sizeof(uint16_t), &rat_mode_pref);
     add_tlv(buf, QMI_NAS_TLV_SS_DURATION, sizeof(uint8_t), &duration);
 

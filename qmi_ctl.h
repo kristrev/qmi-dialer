@@ -9,10 +9,15 @@
 //CTL message types
 #define QMI_CTL_GET_CID         0x0022
 #define QMI_CTL_RELEASE_CID     0x0023
+#define QMI_CTL_SET_DATA_FORMAT	0x0026
 #define QMI_CTL_SYNC            0x0027
 
 //CTL TLVs
 #define QMI_CTL_TLV_ALLOC_INFO  0x01
+
+//Set data format
+#define	QMI_CTL_TLV_DATA_FORMAT	0x01
+#define QMI_CTL_TLV_DATA_PROTO	0x10
 
 struct qmi_device;
 
