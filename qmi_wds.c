@@ -204,7 +204,7 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
             //Disable autoconnect, otherwise the dialer will just become
             //confused, connections will not be made and so on (MF821D has
             //seemingly large problems with this value)
-            qmi_wds_send_update_autoconnect(qmid, 0);
+            qmi_wds_send_update_autoconnect(qmid, 1);
             qmi_wds_send_set_event_report(qmid);
             break;
         case WDS_DISCONNECTED:
@@ -217,6 +217,8 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
 
             qmi_wds_update_connect(qmid);
             break;
+		default:
+			break;
     }
 
     return retval;
@@ -335,6 +337,8 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         //TODO: Consider adding the actual error code too
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Connection attempt failed\n");
+
+		//qmi_wds_send_get_pkt_srvc(qmid);
 
         if(qmid->wds_state != WDS_CONNECTED)
             //No need to update rat_mode_pref in case of Netcom mode. Rat mode
