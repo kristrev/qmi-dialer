@@ -204,7 +204,7 @@ uint8_t qmi_wds_send(struct qmi_device *qmid){
             //Disable autoconnect, otherwise the dialer will just become
             //confused, connections will not be made and so on (MF821D has
             //seemingly large problems with this value)
-            qmi_wds_send_update_autoconnect(qmid, 1);
+            qmi_wds_send_update_autoconnect(qmid, 0);
             qmi_wds_send_set_event_report(qmid);
             break;
         case WDS_DISCONNECTED:
