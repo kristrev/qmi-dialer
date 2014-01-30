@@ -85,7 +85,6 @@ struct qmi_device{
     uint16_t rat_mode_pref;
     uint8_t buf[QMI_DEFAULT_BUF_SIZE];
     uint8_t pin_unlocked;
-    uint8_t netcom_mode;
     uint8_t umts_locked;
 
     //Service is main service (GSM, UMTS, LTE)

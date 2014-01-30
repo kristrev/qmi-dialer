@@ -288,7 +288,6 @@ struct option qmi_options[] = {
     {"pin",     optional_argument, NULL, 'p'},
     {"lock",    optional_argument, NULL, 'l'},
     {"interface",  required_argument, NULL, 'i'},
-    {"netcom",  optional_argument, NULL, 'n'},
 };
 
 static void usage(){
@@ -298,9 +297,6 @@ static void usage(){
     fprintf(stderr, "\t--interface/-i Network interface belonging to device\n");
     fprintf(stderr, "\t--pin/-p PIN code (optional)\n");
     fprintf(stderr, "\t--lock/-l Lock to UMTS (optional)\n");
-    fprintf(stderr, "\t--netcom/-n Some networks don't allow UE to connect "
-            "directly to LTE, so update system selection preference to include "
-            "LTE after inital connection has been made\n");
     fprintf(stderr, "\t-v Verbosity level (up to vvvv)\n");
 }
 
@@ -341,7 +337,6 @@ int main(int argc, char *argv[]){
                     qmid_verbose_logging++;
                 break;
             case 'n':
-                qmid.netcom_mode = 1;
                 qmid.rat_mode_pref = QMI_NAS_RAT_MODE_PREF_MIN;
                 break;
             case 'l':

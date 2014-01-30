@@ -356,14 +356,7 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     qmid->pkt_data_handle = le32toh(*((uint32_t*) (tlv + 1)));
     qmid->wds_state = WDS_CONNECTED;
-
-    //Update the system selection preferences if in Netcom mode (allow
-    //UE to connect to LTE) and not locked to UMTS/GSM
-    if(qmid->netcom_mode && !qmid->umts_locked){
-        qmid->rat_mode_pref = QMI_NAS_RAT_MODE_PREF_ALL;
-        qmi_nas_set_sys_selection(qmid);
-    }
-
+    
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Modem is connected. Handle %x\n",
                 qmid->pkt_data_handle);
@@ -448,13 +441,6 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
     } else{
         qmid->wds_state = WDS_DISCONNECTED;
 
-        //Only allow devices to reconnect to UMTS/GSM networks if Netcom mode is
-        //enabled
-        if(qmid->netcom_mode && !qmid->umts_locked){
-            qmid->rat_mode_pref = QMI_NAS_RAT_MODE_PREF_MIN;
-            qmi_nas_set_sys_selection(qmid);
-        }
- 
         //Set network interface as down. This will not fail in a normal usage
         //scenario, network interface depends on qmi-device. So it is only
         //removed if qmi device is removed too
