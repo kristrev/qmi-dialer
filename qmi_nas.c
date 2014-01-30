@@ -371,6 +371,9 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
             else
                 cur_bars = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
 
+			QMID_DEBUG_PRINT(stderr, "SI %x %d %d %d\n", tlv->type,
+					wcdma_sig->rssi, le16toh(wcdma_sig->ecio), cur_bars);
+
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
                 QMID_DEBUG_PRINT(stderr, "WCDMA. RSSI %d dBm ECIO %d "
                         "# bars %d\n", wcdma_sig->rssi,
@@ -390,6 +393,10 @@ static uint8_t qmi_nas_handle_sig_info(struct qmi_device *qmid){
                 cur_bars = SIGNAL_STRENGTH_MODERATE;
             else if(cur_signal_dbm >= -115)
                 cur_bars = SIGNAL_STRENGTH_POOR;
+
+			QMID_DEBUG_PRINT(stderr, "SI %x %d %d %d %d %d\n", tlv->type, 
+					lte_sig->rssi, lte_sig->rsrq, lte_sig->rsrp,
+					lte_sig->snr/10, cur_bars);
 
             if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
                 QMID_DEBUG_PRINT(stderr, "LTE. RSSI %d dBm RSRQ %d dB RSRP %d "

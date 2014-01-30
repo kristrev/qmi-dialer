@@ -301,6 +301,8 @@ static uint8_t qmi_wds_handle_event_report(struct qmi_device *qmid){
 
     cur_db = (qmi_wds_cur_db_t*) (tlv+1);
 
+	QMID_DEBUG_PRINT(stderr, "DBE %x\n", cur_db->rat_mask);
+
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1){
         if(cur_db->rat_mask & QMI_WDS_ER_RAT_WCDMA)
             QMID_DEBUG_PRINT(stderr, "Data bearer is changed to WCDMA\n");
@@ -338,6 +340,8 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
         if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
             QMID_DEBUG_PRINT(stderr, "Connection attempt failed\n");
 
+		QMID_DEBUG_PRINT(stderr, "C F\n");
+
 		//qmi_wds_send_get_pkt_srvc(qmid);
 
         if(qmid->wds_state != WDS_CONNECTED)
@@ -356,7 +360,9 @@ static uint8_t qmi_wds_handle_connect(struct qmi_device *qmid){
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     qmid->pkt_data_handle = le32toh(*((uint32_t*) (tlv + 1)));
     qmid->wds_state = WDS_CONNECTED;
-    
+   
+	QMID_DEBUG_PRINT(stderr, "C S\n");
+
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "Modem is connected. Handle %x\n",
                 qmid->pkt_data_handle);
@@ -382,6 +388,8 @@ static uint8_t qmi_wds_handle_get_db_tech(struct qmi_device *qmid){
 
     tlv = (qmi_tlv_t*) (((uint8_t*) (tlv+1)) + le16toh(tlv->length));
     data_bearer = *((uint8_t*) (tlv+1));
+
+	QMID_DEBUG_PRINT(stderr, "DB %x\n", data_bearer);
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1){
         if(data_bearer == QMI_WDS_DB_GSM)
@@ -424,6 +432,8 @@ static uint8_t qmi_wds_handle_pkt_srvc(struct qmi_device *qmid){
     //I am only interested in the first TLV and never request this one
     uint8_t conn_status = *((uint8_t*) (tlv+1));
     uint8_t reconn_required = *(((uint8_t*) (tlv+1))+1);
+
+	QMID_DEBUG_PRINT(stderr, "P %x\n", conn_status);
 
     if(qmid_verbose_logging >= QMID_LOG_LEVEL_1)
         QMID_DEBUG_PRINT(stderr, "pkt srvc status: %x reconn: %x\n",
